@@ -1,0 +1,61 @@
+package executor
+
+import (
+	"math"
+	"time"
+)
+
+// Invoked to compute a new deadline. The value passed is the number
+// of times the action has been previously attempted. It is always
+// greater than or equal to 1.
+type DelayFunc func(int) time.Duration
+
+// Creates a new DelayFunc where the first retry occurs after a
+// duration of delay and each subsequent retry is delayed by twice the
+// previous delay. E.g., given a delay of 1s, the delays for retries
+// are 1s, 2s, 4s, 8s, ... The return value is capped at the specified
+// maximum delay. Delays of less than 0 are treated as 0.
+func NewExponentialDelayFunc(delay time.Duration, maxDelay time.Duration) DelayFunc {
+	if delay <= 0 {
+		return NewConstantDelayFunc(0)
+	}
+
+	if maxDelay < delay {
+		maxDelay = delay
+	}
+
+	// after this attempt, we would exceed maxDelay
+	maxAttempts := int(math.Floor(math.Log2(float64(maxDelay/delay)))) + 1
+	if maxAttempts >= 64 {
+		maxAttempts = 63
+	}
+
+	return func(attempt int) time.Duration {
+		if attempt <= 0 {
+			// guard against bad input
+			return delay
+		} else if attempt > maxAttempts {
+			return maxDelay
+		}
+
+		exp := int64(1) << uint(attempt-1)
+
+		d := time.Duration(exp) * delay
+		if d > maxDelay {
+			return maxDelay
+		}
+
+		return d
+	}
+}
+
+// Creates a DelayFunc where all retries occur after a fixed delay.
+func NewConstantDelayFunc(delay time.Duration) DelayFunc {
+	if delay < 0 {
+		delay = 0
+	}
+
+	return func(attempt int) time.Duration {
+		return delay
+	}
+}

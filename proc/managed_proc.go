@@ -1,0 +1,105 @@
+package proc
+
+//go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
+
+import (
+	"errors"
+	"log"
+	"syscall"
+)
+
+type ManagedProc interface {
+	// Start the process.
+	Start() error
+
+	// Process is running.
+	Running() bool
+
+	// Process ran to completion and exited without being signaled.
+	Completed() bool
+
+	// Sends SIGHUP to the process. Returns an error if the
+	// process is not running.
+	Hangup() error
+
+	// Sends SIGQUIT to the process. If the process has already
+	// terminated, no error is returned.
+	Quit() error
+
+	// Sends SIGKILL to the process. If the process has already
+	// terminated, no error is returned.
+	Kill() error
+
+	// Sends SIGUSR1 to the process. If the process has already
+	// terminated, no error is returned.
+	Usr1() error
+
+	// Waits until the process exits.
+	Wait() error
+}
+
+type managedProc struct {
+	*LoggingCmd
+
+	running bool
+	onExit  func(error)
+}
+
+// Constructs a new ManagedProc using DefaultLoggingCommand. Invokes
+// onExit when the process stops running. If the process cannot be
+// started, an error is returned. In this case onExit is not
+// invoked.
+func NewDefaultManagedProc(exe string, args []string, onExit func(error)) ManagedProc {
+	return &managedProc{LoggingCmd: DefaultLoggingCommand(exe, args...), onExit: onExit}
+}
+
+// Constructs a new ManagedProc with a LoggingCommand using the given logger.
+// See NewDefaultManagedProc for details on onExit.
+func NewManagedProc(
+	exe string,
+	args []string,
+	logger *log.Logger,
+	onExit func(error),
+) ManagedProc {
+	return &managedProc{LoggingCmd: LoggingCommand(logger, exe, args...), onExit: onExit}
+}
+
+func (p *managedProc) Start() error {
+	if err := p.LoggingCmd.Start(); err != nil {
+		return err
+	}
+
+	go func() {
+		err := p.Wait()
+		p.running = false
+		p.onExit(err)
+	}()
+
+	p.running = true
+
+	return nil
+}
+
+func (p *managedProc) Running() bool {
+	return p.running
+}
+
+func (p *managedProc) Completed() bool {
+	return p.ProcessState != nil && p.ProcessState.Exited()
+}
+
+func (p *managedProc) Hangup() error {
+	if p.Process != nil {
+		return p.Process.Signal(syscall.SIGHUP)
+	}
+
+	return errors.New("process not available")
+}
+
+func (p *managedProc) Usr1() error {
+	if p.Process != nil {
+		return p.Process.Signal(syscall.SIGUSR1)
+	}
+
+	return errors.New("process not available")
+}
