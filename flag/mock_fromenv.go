@@ -5,7 +5,6 @@ package flag
 
 import (
 	flag "flag"
-
 	gomock "github.com/golang/mock/gomock"
 )
 
