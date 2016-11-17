@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/turbinelabs/nonstdlib/ptr"
+	"github.com/turbinelabs/stats"
 )
 
 const (
@@ -36,6 +37,7 @@ var (
 type retry struct {
 	f          Func
 	cb         CallbackFunc
+	start      time.Time
 	deadline   time.Time
 	ctxt       context.Context
 	ctxtCancel context.CancelFunc
@@ -55,7 +57,8 @@ type retryingExec struct {
 	delay         DelayFunc
 	timeout       time.Duration
 
-	log *log.Logger
+	log   *log.Logger
+	stats stats.Stats
 }
 
 func newCancelCounter(i int, cancelFunc context.CancelFunc) *cancelCounter {
@@ -159,6 +162,7 @@ func NewRetryingExecutor(options ...RetryingExecutorOption) Executor {
 		maxAttempts:   defaultMaxAttempts,
 		delay:         defaultDelayFunc,
 		timeout:       noTimeout,
+		stats:         stats.NewNoopStats(),
 	}
 
 	for _, apply := range options {
@@ -218,13 +222,19 @@ func (q *retryingExec) mkContext(
 }
 
 func (q *retryingExec) Exec(f Func, cb CallbackFunc) {
-	now := time.Now()
-	ctxt, ctxtCancel := q.mkContext(now, false)
+	start := time.Now()
+	defer func() {
+		q.stats.TimingDuration("exec_handletime", time.Now().Sub(start))
+		q.stats.Inc("exec_call", 1)
+	}()
+
+	ctxt, ctxtCancel := q.mkContext(start, false)
 
 	r := &retry{
 		f:          f,
 		cb:         cb,
-		deadline:   now,
+		start:      start,
+		deadline:   start,
 		ctxt:       ctxt,
 		ctxtCancel: ctxtCancel,
 		attempts:   0,
@@ -234,7 +244,7 @@ func (q *retryingExec) Exec(f Func, cb CallbackFunc) {
 }
 
 func (q *retryingExec) execMany(
-	now time.Time,
+	start time.Time,
 	ctxt context.Context,
 	ctxtCancel context.CancelFunc,
 	fs []Func,
@@ -252,7 +262,8 @@ func (q *retryingExec) execMany(
 		r := &retry{
 			f:          f,
 			cb:         indexedCb,
-			deadline:   now,
+			start:      start,
+			deadline:   start,
 			ctxt:       ctxt,
 			ctxtCancel: canceler.cancel,
 			attempts:   0,
@@ -263,14 +274,20 @@ func (q *retryingExec) execMany(
 }
 
 func (q *retryingExec) ExecMany(fs []Func, cb ManyCallbackFunc) {
+	start := time.Now()
+	defer func() {
+		q.stats.TimingDuration("exec_many_handletime", time.Now().Sub(start))
+		q.stats.Inc("exec_many_call", 1)
+		q.stats.Inc("exec_many_width", int64(len(fs)))
+	}()
+
 	if len(fs) == 0 {
 		return
 	}
 
-	now := time.Now()
-	ctxt, ctxtCancel := q.mkContext(now, false)
+	ctxt, ctxtCancel := q.mkContext(start, false)
 
-	q.execMany(now, ctxt, ctxtCancel, fs, cb)
+	q.execMany(start, ctxt, ctxtCancel, fs, cb)
 }
 
 type pair struct {
@@ -280,6 +297,13 @@ type pair struct {
 
 func (q *retryingExec) ExecGathered(fs []Func, cb CallbackFunc) {
 	n := len(fs)
+	start := time.Now()
+	defer func() {
+		q.stats.TimingDuration("exec_gathered_handletime", time.Now().Sub(start))
+		q.stats.Inc("exec_gathered_call", 1)
+		q.stats.Inc("exec_gathered_width", int64(n))
+	}()
+
 	if n == 0 {
 		return
 	}
@@ -287,14 +311,13 @@ func (q *retryingExec) ExecGathered(fs []Func, cb CallbackFunc) {
 	if cb == nil {
 		// Don't bother tracking results if the caller doesn't
 		// want a call back.
-		q.ExecMany(fs, nil)
+		ctxt, ctxtCancel := q.mkContext(start, false)
+		q.execMany(start, ctxt, ctxtCancel, fs, nil)
 		return
 	}
 
 	completed := make(chan pair, n)
-
-	now := time.Now()
-	ctxt, ctxtCancel := q.mkContext(now, true)
+	ctxt, ctxtCancel := q.mkContext(start, true)
 
 	go func() {
 		defer close(completed)
@@ -325,7 +348,7 @@ func (q *retryingExec) ExecGathered(fs []Func, cb CallbackFunc) {
 		}
 	}
 
-	q.execMany(now, ctxt, ctxtCancel, fs, mcb)
+	q.execMany(start, ctxt, ctxtCancel, fs, mcb)
 }
 
 func (q *retryingExec) Stop() {
@@ -483,10 +506,16 @@ func (q *retryingExec) handleExec() {
 
 		r.attempts++
 
+		q.stats.TimingDuration("action_delaytime", time.Now().Sub(r.deadline))
+		q.stats.Inc("action_attempts", 1)
+
 		t := q.rescuedCall(r.f, r.ctxt)
+
 		if t.IsError() {
+			q.stats.Inc("action_failure", 1)
 			if err := r.ctxt.Err(); err != nil {
 				// context deadline expired or canceled
+				q.stats.Inc("action_timeout", 1)
 				t = NewError(fmt.Errorf("action exceeded timeout (%s)", q.timeout))
 			} else {
 				// TODO: check if error is something want actually want to
@@ -495,22 +524,35 @@ func (q *retryingExec) handleExec() {
 
 				if limit, ok := r.ctxt.Deadline(); ok && limit.Before(r.deadline) {
 					// context will timeout before retry
+					q.stats.Inc("action_timeout", 1)
 					t = NewError(fmt.Errorf(
 						"failed action would timeout before next retry: %s",
 						t.Error().Error(),
 					))
 				} else if q.add(r) {
 					// retrying
+					q.stats.Inc("action_retry", 1)
 					continue
+				} else {
+					q.stats.Inc("action_retries_exhausted", 1)
 				}
 			}
 		}
 
+		complete := time.Now()
+		q.stats.TimingDuration("action_time", complete.Sub(r.start))
+
 		if r.cb != nil {
 			r.cb(t)
+			q.stats.TimingDuration("action_callback_time", time.Now().Sub(complete))
 		}
+
 		if r.ctxtCancel != nil {
 			r.ctxtCancel()
 		}
 	}
+}
+
+func (q *retryingExec) SetStats(s stats.Stats) {
+	q.stats = stats.NewAsyncStats(s)
 }

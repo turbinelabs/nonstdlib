@@ -4,6 +4,8 @@ package executor
 
 import (
 	"context"
+
+	"github.com/turbinelabs/stats"
 )
 
 // Invoked to execute an action. The given Context should be used to
@@ -47,4 +49,8 @@ type Executor interface {
 	// attempt. Pending actions and retries are dropped and
 	// callbacks are not invoked.
 	Stop()
+
+	// Submits diagnostic information about executor behavior to
+	// the given stats.Stats.
+	SetStats(stats.Stats)
 }
