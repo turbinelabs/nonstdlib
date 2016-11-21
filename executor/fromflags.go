@@ -78,7 +78,10 @@ func NewFromFlags(f *tbnflag.PrefixedFlagSet) FromFlags {
 	f.DurationVar(
 		&ff.timeout,
 		"timeout",
-		0,
+		5*time.Second, // TODO: #1789
+		// this should probably be zero or configurable by calling code. It's 5 because the
+		// the current only user of it, the forwarder, needs a default value of 5 and there's no
+		// way to plumb the default value.
 		"Specifies the default timeout for actions. A timeout of 0 means no timeout.",
 	)
 	return ff

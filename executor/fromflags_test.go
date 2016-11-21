@@ -47,7 +47,7 @@ func TestFromFlags(t *testing.T) {
 	assert.NonNil(t, execImpl.delay)
 	assert.Equal(t, execImpl.delay(1), 100*time.Millisecond)
 	assert.Equal(t, execImpl.delay(100000), 30*time.Second)
-	assert.Equal(t, execImpl.timeout, 0*time.Second)
+	assert.Equal(t, execImpl.timeout, 5*time.Second)
 	assert.SameInstance(t, execImpl.log, log)
 
 	exec.Stop()
