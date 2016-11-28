@@ -5,7 +5,7 @@ package executor
 import (
 	"context"
 
-	"github.com/turbinelabs/stats"
+	"github.com/turbinelabs/nonstdlib/stats"
 )
 
 // Invoked to execute an action. The given Context should be used to

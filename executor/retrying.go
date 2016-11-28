@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/turbinelabs/nonstdlib/ptr"
-	"github.com/turbinelabs/stats"
+	"github.com/turbinelabs/nonstdlib/stats"
 )
 
 const (

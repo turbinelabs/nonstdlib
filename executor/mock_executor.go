@@ -5,7 +5,7 @@ package executor
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	stats "github.com/turbinelabs/stats"
+	stats "github.com/turbinelabs/nonstdlib/stats"
 )
 
 // Mock of Executor interface
