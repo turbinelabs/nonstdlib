@@ -10,7 +10,7 @@ import (
 	"github.com/turbinelabs/test/assert"
 )
 
-func TestRetryingExecExecWithTimeoutSucceeds(t *testing.T) {
+func TestRetryingExecExecWithGlobalTimeoutSucceeds(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
@@ -44,7 +44,7 @@ func TestRetryingExecExecWithTimeoutSucceeds(t *testing.T) {
 	}
 }
 
-func TestRetryingExecExecWithTimeoutTimesOut(t *testing.T) {
+func TestRetryingExecExecWithGlobalTimeoutTimesOut(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
@@ -70,7 +70,7 @@ func TestRetryingExecExecWithTimeoutTimesOut(t *testing.T) {
 	}
 }
 
-func TestRetryingExecExecWithTimeoutTimesOutBeforeRetry(t *testing.T) {
+func TestRetryingExecExecWithGlobalTimeoutTimesOutBeforeRetry(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
@@ -101,7 +101,7 @@ func TestRetryingExecExecWithTimeoutTimesOutBeforeRetry(t *testing.T) {
 	}
 }
 
-func TestRetryingExecExecManyWithTimeoutSucceeds(t *testing.T) {
+func TestRetryingExecExecManyWithGlobalTimeoutSucceeds(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
@@ -146,7 +146,7 @@ func TestRetryingExecExecManyWithTimeoutSucceeds(t *testing.T) {
 	}
 }
 
-func TestRetryingExecExecManyWithTimeoutTimesOut(t *testing.T) {
+func TestRetryingExecExecManyWithGlobalTimeoutTimesOut(t *testing.T) {
 	rets := make(chan string, 10)
 	defer close(rets)
 
@@ -188,7 +188,7 @@ func TestRetryingExecExecManyWithTimeoutTimesOut(t *testing.T) {
 	assert.ErrorContains(t, err, "action exceeded timeout (10ms)")
 }
 
-func TestRetryingExecExecGatheredWithTimeoutSucceeds(t *testing.T) {
+func TestRetryingExecExecGatheredWithGlobalTimeoutSucceeds(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
@@ -221,7 +221,7 @@ func TestRetryingExecExecGatheredWithTimeoutSucceeds(t *testing.T) {
 	}
 }
 
-func TestRetryingExecExecGatheredWithTimeoutTimesOut(t *testing.T) {
+func TestRetryingExecExecGatheredWithGlobalTimeoutTimesOut(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
@@ -246,5 +246,105 @@ func TestRetryingExecExecGatheredWithTimeoutTimesOut(t *testing.T) {
 
 	if assert.True(t, try.IsError()) {
 		assert.ErrorContains(t, try.Error(), "action exceeded timeout (10ms)")
+	}
+}
+
+func TestRetryingExecExecWithAttemptTimeoutSucceeds(t *testing.T) {
+	c := make(chan Try, 10)
+	defer close(c)
+
+	q := NewRetryingExecutor(
+		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
+		WithMaxAttempts(3),
+		WithAttemptTimeout(10*time.Millisecond),
+	)
+	defer q.Stop()
+
+	invocations := 0
+
+	q.Exec(
+		func(ctxt context.Context) (interface{}, error) {
+			invocations++
+			if invocations == 3 {
+				return "ok", nil
+			}
+			<-ctxt.Done()
+			return nil, errors.New("not yet")
+		},
+		func(try Try) {
+			c <- try
+		},
+	)
+
+	try := <-c
+
+	assert.Equal(t, invocations, 3)
+	if assert.True(t, try.IsReturn()) {
+		assert.Equal(t, try.Get(), "ok")
+	}
+}
+
+func TestRetryingExecExecWithAttemptTimeoutTimesOut(t *testing.T) {
+	c := make(chan Try, 10)
+	defer close(c)
+
+	q := NewRetryingExecutor(
+		WithRetryDelayFunc(NewConstantDelayFunc(1*time.Millisecond)),
+		WithMaxAttempts(3),
+		WithAttemptTimeout(10*time.Millisecond),
+	)
+	defer q.Stop()
+
+	invocations := 0
+
+	q.Exec(
+		func(ctxt context.Context) (interface{}, error) {
+			invocations++
+			<-ctxt.Done()
+			return nil, errors.New("ctxt done")
+		},
+		func(try Try) {
+			c <- try
+		},
+	)
+
+	try := <-c
+
+	assert.Equal(t, invocations, 3)
+	if assert.True(t, try.IsError()) {
+		assert.ErrorContains(t, try.Error(), "action exceeded attempt timeout (10ms)")
+	}
+}
+
+func TestRetryingExecExecWithGlobalAndAttemptTimeoutsTimesOut(t *testing.T) {
+	c := make(chan Try, 10)
+	defer close(c)
+
+	q := NewRetryingExecutor(
+		WithRetryDelayFunc(NewConstantDelayFunc(1*time.Millisecond)),
+		WithMaxAttempts(10),
+		WithAttemptTimeout(20*time.Millisecond),
+		WithTimeout(50*time.Millisecond),
+	)
+	defer q.Stop()
+
+	invocations := 0
+
+	q.Exec(
+		func(ctxt context.Context) (interface{}, error) {
+			invocations++
+			<-ctxt.Done()
+			return nil, errors.New("ctxt done")
+		},
+		func(try Try) {
+			c <- try
+		},
+	)
+
+	try := <-c
+
+	assert.True(t, invocations > 1)
+	if assert.True(t, try.IsError()) {
+		assert.ErrorContains(t, try.Error(), "action exceeded timeout (50ms)")
 	}
 }

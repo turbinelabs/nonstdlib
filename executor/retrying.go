@@ -20,6 +20,33 @@ const (
 	defaultMaxQueueDepth = 10
 	defaultParallelism   = 1
 	noTimeout            = time.Duration(0)
+
+	execHandletime         = "exec_handletime"
+	execManyHandletime     = "exec_many_handletime"
+	execGatheredHandletime = "exec_gathered_handletime"
+	execCall               = "exec_call"
+	execManyCall           = "exec_many_call"
+	execManyWidth          = "exec_many_width"
+	execGatheredCall       = "exec_gathered_call"
+	execGatheredWidth      = "exec_gathered_width"
+
+	actionDelaytime        = "action_delaytime"
+	actionAttempts         = "action_attempts"
+	actionFailure          = "action_failure"
+	actionGlobalTimeout    = "action_timeout"
+	actionRetryTimeout     = "action_attempt_timeout"
+	actionCanceled         = "action_canceled"
+	actionRetry            = "action_retry"
+	actionRetriesExhausted = "action_retries_exhausted"
+)
+
+type contextErrorType int
+
+const (
+	noError contextErrorType = iota
+	cancellation
+	attemptTimeout
+	globalTimeout
 )
 
 var (
@@ -51,11 +78,12 @@ type retryingExec struct {
 	execChan     chan *retry
 	q            []*retry
 
-	parallelism   int
-	maxQueueDepth int
-	maxAttempts   int
-	delay         DelayFunc
-	timeout       time.Duration
+	parallelism    int
+	maxQueueDepth  int
+	maxAttempts    int
+	delay          DelayFunc
+	timeout        time.Duration
+	attemptTimeout time.Duration
 
 	log   *log.Logger
 	stats stats.Stats
@@ -151,18 +179,33 @@ func WithTimeout(timeout time.Duration) RetryingExecutorOption {
 	}
 }
 
+// Sets the timeout for completion individual attempts of an
+// action. If the attempt has not completed within the given duration,
+// it is canceled (and potentially retried). Timeouts less than or
+// equal to zero are treated as "no time out."
+func WithAttemptTimeout(timeout time.Duration) RetryingExecutorOption {
+	if timeout <= noTimeout {
+		timeout = noTimeout
+	}
+
+	return func(q *retryingExec) {
+		q.attemptTimeout = timeout
+	}
+}
+
 // Constructs a new Executor. By default, it never retries, has
 // parallelism of 1, and a maximum queue depth of 10.
 func NewRetryingExecutor(options ...RetryingExecutorOption) Executor {
 	q := &retryingExec{
-		deadlineChan:  make(chan time.Time, 2),
-		q:             make([]*retry, 0, 10),
-		parallelism:   defaultParallelism,
-		maxQueueDepth: defaultMaxQueueDepth,
-		maxAttempts:   defaultMaxAttempts,
-		delay:         defaultDelayFunc,
-		timeout:       noTimeout,
-		stats:         stats.NewNoopStats(),
+		deadlineChan:   make(chan time.Time, 2),
+		q:              make([]*retry, 0, 10),
+		parallelism:    defaultParallelism,
+		maxQueueDepth:  defaultMaxQueueDepth,
+		maxAttempts:    defaultMaxAttempts,
+		delay:          defaultDelayFunc,
+		timeout:        noTimeout,
+		attemptTimeout: noTimeout,
+		stats:          stats.NewNoopStats(),
 	}
 
 	for _, apply := range options {
@@ -224,8 +267,8 @@ func (q *retryingExec) mkContext(
 func (q *retryingExec) Exec(f Func, cb CallbackFunc) {
 	start := time.Now()
 	defer func() {
-		q.stats.TimingDuration("exec_handletime", time.Now().Sub(start))
-		q.stats.Inc("exec_call", 1)
+		q.stats.TimingDuration(execHandletime, time.Now().Sub(start))
+		q.stats.Inc(execCall, 1)
 	}()
 
 	ctxt, ctxtCancel := q.mkContext(start, false)
@@ -276,9 +319,9 @@ func (q *retryingExec) execMany(
 func (q *retryingExec) ExecMany(fs []Func, cb ManyCallbackFunc) {
 	start := time.Now()
 	defer func() {
-		q.stats.TimingDuration("exec_many_handletime", time.Now().Sub(start))
-		q.stats.Inc("exec_many_call", 1)
-		q.stats.Inc("exec_many_width", int64(len(fs)))
+		q.stats.TimingDuration(execManyHandletime, time.Now().Sub(start))
+		q.stats.Inc(execManyCall, 1)
+		q.stats.Inc(execManyWidth, int64(len(fs)))
 	}()
 
 	if len(fs) == 0 {
@@ -299,9 +342,9 @@ func (q *retryingExec) ExecGathered(fs []Func, cb CallbackFunc) {
 	n := len(fs)
 	start := time.Now()
 	defer func() {
-		q.stats.TimingDuration("exec_gathered_handletime", time.Now().Sub(start))
-		q.stats.Inc("exec_gathered_call", 1)
-		q.stats.Inc("exec_gathered_width", int64(n))
+		q.stats.TimingDuration(execGatheredHandletime, time.Now().Sub(start))
+		q.stats.Inc(execGatheredCall, 1)
+		q.stats.Inc(execGatheredWidth, int64(n))
 	}()
 
 	if n == 0 {
@@ -497,6 +540,39 @@ func (q *retryingExec) rescuedCall(f Func, ctxt context.Context) (t Try) {
 	return
 }
 
+func checkCtxtError(parent context.Context, child context.Context) contextErrorType {
+	switch err := parent.Err(); err {
+	case context.DeadlineExceeded:
+		return globalTimeout
+
+	case nil:
+		// check child
+
+	default:
+		return cancellation
+	}
+
+	switch err := child.Err(); err {
+	case context.DeadlineExceeded:
+		return attemptTimeout
+
+	case nil:
+		return noError
+
+	default:
+		return cancellation
+	}
+
+}
+
+func (q *retryingExec) mkRetryContext(c context.Context) (context.Context, context.CancelFunc) {
+	if q.attemptTimeout > noTimeout {
+		return context.WithTimeout(c, q.attemptTimeout)
+	}
+
+	return context.WithCancel(c)
+}
+
 func (q *retryingExec) handleExec() {
 	for {
 		r, ok := <-q.execChan
@@ -506,35 +582,60 @@ func (q *retryingExec) handleExec() {
 
 		r.attempts++
 
-		q.stats.TimingDuration("action_delaytime", time.Now().Sub(r.deadline))
-		q.stats.Inc("action_attempts", 1)
+		ctxt, localCancel := q.mkRetryContext(r.ctxt)
 
-		t := q.rescuedCall(r.f, r.ctxt)
+		q.stats.TimingDuration(actionDelaytime, time.Now().Sub(r.deadline))
+		q.stats.Inc(actionAttempts, 1)
+
+		t := q.rescuedCall(r.f, ctxt)
+
+		ctxtErrType := checkCtxtError(r.ctxt, ctxt)
+		localCancel()
 
 		if t.IsError() {
-			q.stats.Inc("action_failure", 1)
-			if err := r.ctxt.Err(); err != nil {
-				// context deadline expired or canceled
-				q.stats.Inc("action_timeout", 1)
-				t = NewError(fmt.Errorf("action exceeded timeout (%s)", q.timeout))
+			q.stats.Inc(actionFailure, 1)
+			if ctxtErrType == globalTimeout {
+				// global timeout expired
+				q.stats.Inc(actionGlobalTimeout, 1)
+				t = NewError(
+					fmt.Errorf(
+						"action exceeded timeout (%s)",
+						q.timeout,
+					),
+				)
+			} else if ctxtErrType == cancellation {
+				// canceled
+				q.stats.Inc(actionCanceled, 1)
+				t = NewError(errors.New("action canceled"))
 			} else {
+				if ctxtErrType == attemptTimeout {
+					// retry timeout expired, just count it
+					q.stats.Inc(actionRetryTimeout, 1)
+					t = NewError(
+						fmt.Errorf(
+							"action exceeded attempt timeout (%s)",
+							q.attemptTimeout,
+						),
+					)
+				}
+
 				// TODO: check if error is something want actually want to
 				// retry (see #1686)
 				r.deadline = time.Now().Add(q.delay(r.attempts))
 
 				if limit, ok := r.ctxt.Deadline(); ok && limit.Before(r.deadline) {
 					// context will timeout before retry
-					q.stats.Inc("action_timeout", 1)
+					q.stats.Inc(actionGlobalTimeout, 1)
 					t = NewError(fmt.Errorf(
 						"failed action would timeout before next retry: %s",
 						t.Error().Error(),
 					))
 				} else if q.add(r) {
 					// retrying
-					q.stats.Inc("action_retry", 1)
+					q.stats.Inc(actionRetry, 1)
 					continue
 				} else {
-					q.stats.Inc("action_retries_exhausted", 1)
+					q.stats.Inc(actionRetriesExhausted, 1)
 				}
 			}
 		}
