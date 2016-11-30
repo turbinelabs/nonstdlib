@@ -1,6 +1,8 @@
 package flag
 
 import (
+	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/turbinelabs/test/assert"
@@ -30,55 +32,104 @@ func TestStringGet(t *testing.T) {
 	assert.DeepEqual(t, s.Get(), s.Strings)
 }
 
-func TestStringSet(t *testing.T) {
-	s := &Strings{Delimiter: ","}
-	err := s.Set("a,b,c")
-	assert.DeepEqual(t, s.Strings, []string{"a", "b", "c"})
-	assert.Nil(t, err)
-
-	err = s.Set("a")
-	assert.DeepEqual(t, s.Strings, []string{"a"})
-	assert.Nil(t, err)
-
-	err = s.Set(",,,,,,")
-	assert.DeepEqual(t, s.Strings, []string{})
-	assert.Nil(t, err)
-
-	err = s.Set(",,a,,c,,")
-	assert.DeepEqual(t, s.Strings, []string{"a", "c"})
-	assert.Nil(t, err)
-
-	err = s.Set(" , , c , , a , , ")
-	assert.DeepEqual(t, s.Strings, []string{"c", "a"})
-	assert.Nil(t, err)
-
-	err = s.Set("")
-	assert.DeepEqual(t, s.Strings, []string{})
-	assert.Nil(t, err)
-
-	s = &Strings{Delimiter: "-"}
-	err = s.Set("a-b-c")
-	assert.DeepEqual(t, s.Strings, []string{"a", "b", "c"})
-	assert.Nil(t, err)
-
-	err = s.Set("a,b,c")
-	assert.DeepEqual(t, s.Strings, []string{"a,b,c"})
-	assert.Nil(t, err)
+type setTestCase struct {
+	delimiter string
+	input     string
+	expected  []string
 }
 
-func TestStringSetWithConstraint(t *testing.T) {
+func (t *setTestCase) name(i int) string {
+	return fmt.Sprintf(
+		"testcase %d (%s split on '%s')",
+		i,
+		t.input,
+		t.delimiter,
+	)
+}
+
+func TestStringsSet(t *testing.T) {
+	testcases := []setTestCase{
+		{",", "a,b,c", []string{"a", "b", "c"}},
+		{",", "a", []string{"a"}},
+		{",", ",,,,,,", []string{}},
+		{",", ",,a,,c,,", []string{"a", "c"}},
+		{",", " , , c , , a , , ", []string{"c", "a"}},
+		{",", "", []string{}},
+		{"-", "a-b-c", []string{"a", "b", "c"}},
+		{"-", "a,b,c", []string{"a,b,c"}},
+	}
+
+	for i, testcase := range testcases {
+		assert.Group(
+			testcase.name(i),
+			t,
+			func(g *assert.G) {
+				s := &Strings{Delimiter: testcase.delimiter}
+				err := s.Set(testcase.input)
+				assert.DeepEqual(g, s.Strings, testcase.expected)
+				assert.Nil(g, err)
+			},
+		)
+	}
+}
+
+func TestStringsSetWithConstraint(t *testing.T) {
 	s := &Strings{AllowedValues: []string{"a", "b", "c"}, Delimiter: ","}
 	err := s.Set("a,b,c")
 	assert.DeepEqual(t, s.Strings, []string{"a", "b", "c"})
 	assert.Nil(t, err)
 
-	s.Strings = []string{}
-
+	s.ResetDefault()
 	err = s.Set("a,b,c,d")
 	assert.DeepEqual(t, s.Strings, []string{})
 	assert.ErrorContains(t, err, "invalid flag value(s): d")
 
+	s.ResetDefault()
 	err = s.Set("x,a,y,b,z,c")
 	assert.DeepEqual(t, s.Strings, []string{})
 	assert.ErrorContains(t, err, "invalid flag value(s): x, y, z")
+}
+
+func TestStringsSetMulti(t *testing.T) {
+	s := &Strings{Delimiter: ","}
+	err := s.Set("a,b")
+	assert.Nil(t, err)
+	err = s.Set("c,d")
+	assert.Nil(t, err)
+	assert.ArrayEqual(t, s.Strings, []string{"a", "b", "c", "d"})
+
+	s = &Strings{Delimiter: ","}
+	s.ResetDefault("default-value-semantics")
+
+	err = s.Set("a")
+	assert.Nil(t, err)
+	err = s.Set("b")
+	assert.Nil(t, err)
+	assert.ArrayEqual(t, s.Strings, []string{"a", "b"})
+}
+
+func TestStringsFlagSetIntegration(t *testing.T) {
+	strings1 := NewStrings()
+	strings2 := NewStrings()
+	strings3 := NewStrings()
+
+	strings2.Strings = []string{"some", "default", "values"}
+
+	fs := flag.NewFlagSet("stuff", flag.PanicOnError)
+	fs.Var(&strings1, "x", "Flag help")
+	fs.Var(&strings2, "y", "Flag help")
+	fs.Var(&strings3, "z", "Flag help")
+
+	fs.Parse([]string{
+		"-x=a",
+		"-z=g,h",
+		"-x=b",
+		"-y=d,e,f",
+		"-x=c",
+		"-z=i",
+	})
+
+	assert.ArrayEqual(t, strings1.Strings, []string{"a", "b", "c"})
+	assert.ArrayEqual(t, strings2.Strings, []string{"d", "e", "f"})
+	assert.ArrayEqual(t, strings3.Strings, []string{"g", "h", "i"})
 }
