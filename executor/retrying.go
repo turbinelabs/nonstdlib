@@ -24,18 +24,16 @@ const (
 	execHandletime         = "exec_handletime"
 	execManyHandletime     = "exec_many_handletime"
 	execGatheredHandletime = "exec_gathered_handletime"
-	execCall               = "exec_call"
-	execManyCall           = "exec_many_call"
 	execManyWidth          = "exec_many_width"
-	execGatheredCall       = "exec_gathered_call"
 	execGatheredWidth      = "exec_gathered_width"
 
-	actionDelaytime        = "action_delaytime"
-	actionAttempts         = "action_attempts"
-	actionFailure          = "action_failure"
-	actionGlobalTimeout    = "action_timeout"
-	actionRetryTimeout     = "action_attempt_timeout"
-	actionCanceled         = "action_canceled"
+	actionDelaytime = "action_delaytime"
+	actionAttempts  = "action_attempts"
+
+	actionFailure          = "action_failure.error"
+	actionGlobalTimeout    = "action_failure.timeout"
+	actionRetryTimeout     = "action_failure.attempt_timeout"
+	actionCanceled         = "action_failure.canceled"
 	actionRetry            = "action_retry"
 	actionRetriesExhausted = "action_retries_exhausted"
 )
@@ -268,7 +266,6 @@ func (q *retryingExec) Exec(f Func, cb CallbackFunc) {
 	start := time.Now()
 	defer func() {
 		q.stats.TimingDuration(execHandletime, time.Now().Sub(start))
-		q.stats.Inc(execCall, 1)
 	}()
 
 	ctxt, ctxtCancel := q.mkContext(start, false)
@@ -320,7 +317,6 @@ func (q *retryingExec) ExecMany(fs []Func, cb ManyCallbackFunc) {
 	start := time.Now()
 	defer func() {
 		q.stats.TimingDuration(execManyHandletime, time.Now().Sub(start))
-		q.stats.Inc(execManyCall, 1)
 		q.stats.Inc(execManyWidth, int64(len(fs)))
 	}()
 
@@ -343,7 +339,6 @@ func (q *retryingExec) ExecGathered(fs []Func, cb CallbackFunc) {
 	start := time.Now()
 	defer func() {
 		q.stats.TimingDuration(execGatheredHandletime, time.Now().Sub(start))
-		q.stats.Inc(execGatheredCall, 1)
 		q.stats.Inc(execGatheredWidth, int64(n))
 	}()
 
@@ -585,7 +580,6 @@ func (q *retryingExec) handleExec() {
 		ctxt, localCancel := q.mkRetryContext(r.ctxt)
 
 		q.stats.TimingDuration(actionDelaytime, time.Now().Sub(r.deadline))
-		q.stats.Inc(actionAttempts, 1)
 
 		t := q.rescuedCall(r.f, ctxt)
 
@@ -593,7 +587,6 @@ func (q *retryingExec) handleExec() {
 		localCancel()
 
 		if t.IsError() {
-			q.stats.Inc(actionFailure, 1)
 			if ctxtErrType == globalTimeout {
 				// global timeout expired
 				q.stats.Inc(actionGlobalTimeout, 1)
@@ -617,6 +610,8 @@ func (q *retryingExec) handleExec() {
 							q.attemptTimeout,
 						),
 					)
+				} else {
+					q.stats.Inc(actionFailure, 1)
 				}
 
 				// TODO: check if error is something want actually want to

@@ -1,5 +1,9 @@
 package indexof
 
+import (
+	"strings"
+)
+
 const NotFound = -1
 
 // ElementPredicate is a function that applies some predicate to an element of
@@ -29,6 +33,15 @@ func IndexOf(len int, test ElementPredicate) int {
 // it is not found.
 func String(ss []string, target string) int {
 	return IndexOf(len(ss), func(i int) bool { return ss[i] == target })
+}
+
+// TrimmedString returns the location of a target string within a
+// []string or -1 if it is not found. The comparison ignores leading
+// and trailing spaces (see strings.TrimSpace).
+func TrimmedString(ss []string, target string) int {
+	target = strings.TrimSpace(target)
+
+	return IndexOf(len(ss), func(i int) bool { return strings.TrimSpace(ss[i]) == target })
 }
 
 // Int returns the location of a target string within a []int or -1 if
