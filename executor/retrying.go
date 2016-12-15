@@ -218,6 +218,17 @@ func NewRetryingExecutor(options ...RetryingExecutorOption) Executor {
 	for i := 0; i < q.parallelism; i++ {
 		go q.handleExec()
 	}
+
+	if q.log != nil {
+		q.log.Printf(
+			"retrying executor: %d workers, max queue %d, max attempts %d, global timeout %s, attempt timeout %s",
+			q.parallelism,
+			q.maxQueueDepth,
+			q.maxAttempts,
+			q.timeout,
+			q.attemptTimeout,
+		)
+	}
 	return q
 }
 
@@ -343,6 +354,9 @@ func (q *retryingExec) ExecGathered(fs []Func, cb CallbackFunc) {
 	}()
 
 	if n == 0 {
+		if cb != nil {
+			cb(NewReturn([]interface{}{}))
+		}
 		return
 	}
 
@@ -363,7 +377,6 @@ func (q *retryingExec) ExecGathered(fs []Func, cb CallbackFunc) {
 
 		for remaining := n; remaining > 0; remaining-- {
 			p := <-completed
-
 			if p.try.IsError() {
 				if cb != nil {
 					cb(p.try)

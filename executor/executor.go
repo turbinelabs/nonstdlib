@@ -36,12 +36,14 @@ type Executor interface {
 
 	// Invoke the given Funcs, possibly in parallel with other
 	// invocations. Calls back with the result of each invocation
-	// at some future point.
+	// at some future point. If no Funcs are given, the callback
+	// is never invoked.
 	ExecMany([]Func, ManyCallbackFunc)
 
 	// Invoke the given Funcs, as in ExecMany. Calls back with a
 	// Try containing an []interface{} of the successful results
-	// or the first error encountered.
+	// or the first error encountered. If no Funcs are given,
+	// the callback is invoked with an empty []interface{}.
 	ExecGathered([]Func, CallbackFunc)
 
 	// Stop executor activity and release related resources. In

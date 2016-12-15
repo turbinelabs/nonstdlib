@@ -248,6 +248,22 @@ func TestRetryingExecExecGatheredNoop(t *testing.T) {
 	)
 	q.Stop()
 
-	// If we passed functions this would panic.
-	q.ExecGathered([]Func{}, func(_ Try) {})
+	cbInvoked := false
+
+	q.ExecGathered(
+		[]Func{},
+		func(try Try) {
+			cbInvoked = true
+
+			assert.True(t, try.IsReturn())
+			result, ok := try.Get().([]interface{})
+			assert.True(t, ok)
+			assert.Equal(t, len(result), 0)
+		},
+	)
+
+	assert.True(t, cbInvoked)
+
+	// doesn't crash:
+	q.ExecGathered([]Func{}, nil)
 }
