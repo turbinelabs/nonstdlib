@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/turbinelabs/nonstdlib/os/exec"
 )
@@ -44,22 +45,23 @@ var (
 	NoEditor = errors.New("could not find " + EditorVar + "environment variable")
 )
 
-func getEditor() (string, error) {
+func getEditor() (string, []string, error) {
 	edit := os.Getenv(EditorVar)
 	if edit == "" && DefaultEditor != "" {
 		edit = DefaultEditor
 	}
-
 	if edit == "" {
-		return "", NoEditor
+		return "", nil, NoEditor
 	}
-	return edit, nil
+	parts := strings.Split(edit, " ")
+
+	return parts[0], parts[1:], nil
 }
 
 // EditPath opens a specified path in the configured editor. If the path
 // doesn't exist or fails to open then an error is returned.
 func EditPath(path string) error {
-	edit, err := getEditor()
+	edit, args, err := getEditor()
 	if err != nil {
 		return err
 	}
@@ -73,7 +75,8 @@ func EditPath(path string) error {
 		return err
 	}
 
-	return exec.RunInTerm(edit, path)
+	args = append(args, path)
+	return exec.RunInTerm(edit, args...)
 }
 
 // EditText opens an editor with the initial contents populated from the
