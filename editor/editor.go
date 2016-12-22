@@ -45,6 +45,14 @@ var (
 	NoEditor = errors.New("could not find " + EditorVar + "environment variable")
 )
 
+// Get returns the editor that will be used as determined by reading the
+// EditorVar environment variable. The unmodified content of EditorVar will
+// returned as the first return value. The second return value will be a
+// space split slice of the contents.
+func Get() (string, []string, error) {
+	return getEditor()
+}
+
 func getEditor() (string, []string, error) {
 	edit := os.Getenv(EditorVar)
 	if edit == "" && DefaultEditor != "" {
@@ -55,13 +63,13 @@ func getEditor() (string, []string, error) {
 	}
 	parts := strings.Split(edit, " ")
 
-	return parts[0], parts[1:], nil
+	return edit, parts, nil
 }
 
 // EditPath opens a specified path in the configured editor. If the path
 // doesn't exist or fails to open then an error is returned.
 func EditPath(path string) error {
-	edit, args, err := getEditor()
+	_, tokenized, err := getEditor()
 	if err != nil {
 		return err
 	}
@@ -75,8 +83,8 @@ func EditPath(path string) error {
 		return err
 	}
 
-	args = append(args, path)
-	return exec.RunInTerm(edit, args...)
+	tokenized = append(tokenized, path)
+	return exec.RunInTerm(tokenized[0], tokenized[1:]...)
 }
 
 // EditText opens an editor with the initial contents populated from the
