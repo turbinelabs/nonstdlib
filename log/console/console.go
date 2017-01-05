@@ -45,7 +45,7 @@ var (
 )
 
 // Error returns a Logger to Stderr prefixed with "[error]" if the log level is
-// error or debug, therwise it returns a no-op Logger.
+// error or debug, otherwise it returns a no-op Logger.
 func Error() *log.Logger {
 	if *logLevelChoice.Choice == noneLevel {
 		return nullLogger
@@ -54,7 +54,7 @@ func Error() *log.Logger {
 }
 
 // Debug returns a Logger to Stderr prefixed with "[debug]" if the log level is
-// debug, therwise it returns a no-op Logger.
+// debug, otherwise it returns a no-op Logger.
 func Debug() *log.Logger {
 	if *logLevelChoice.Choice == debugLevel {
 		return debugLogger
