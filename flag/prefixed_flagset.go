@@ -23,6 +23,8 @@ import (
 	"strings"
 )
 
+// A PrefixedFlagSet extends a flag.FlagSet to allow arbitrary-depth scoping
+// of flags, using "." as a delemiter.
 type PrefixedFlagSet struct {
 	*flag.FlagSet
 
@@ -30,6 +32,10 @@ type PrefixedFlagSet struct {
 	descriptor string
 }
 
+// NewPrefixedFlagSet produces a new PrefixedFlagSet with the given
+// *flag.FlagSet, prefix and descriptor. The descriptor is included
+// will be used to replace the string "{{NAME}}" in usage strings
+// used when declaring Flags.
 func NewPrefixedFlagSet(fs *flag.FlagSet, prefix, descriptor string) *PrefixedFlagSet {
 	if prefix != "" && !strings.HasSuffix(prefix, ".") {
 		prefix = prefix + "."
@@ -50,10 +56,14 @@ func (f *PrefixedFlagSet) Var(value flag.Value, name string, usage string) {
 	f.FlagSet.Var(value, f.prefix+name, f.mkUsage(usage))
 }
 
+// Scope scopes the target PrefixedFlagSet to produce a new PrefixedFlagSet,
+// with the given scope an descriptor.
 func (f *PrefixedFlagSet) Scope(prefix, descriptor string) *PrefixedFlagSet {
 	return NewPrefixedFlagSet(f.FlagSet, f.prefix+prefix, descriptor)
 }
 
+// Descriptor returns the descriptor string, which is used to replace the
+// string "{{NAME}}" in usage strings used when declaring Flags.
 func (f *PrefixedFlagSet) Descriptor() string {
 	return f.descriptor
 }

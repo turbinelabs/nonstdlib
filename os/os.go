@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package os provides an OS interface mirroring a subset of commonly used
+// functions and variables from the golang os package.
 package os
 
 //go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
@@ -49,6 +51,7 @@ type OS interface {
 	NewDirReader(dir string) DirReader
 }
 
+// New produces a new OS backed by the golang os package.
 func New() OS {
 	return goOS{}
 }

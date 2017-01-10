@@ -14,6 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package indexof comprises types and functions in support of finding the
+// index of a target value within a slice of same-typed values. Implementations
+// for some common types are provided.
 package indexof
 
 import (

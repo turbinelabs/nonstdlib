@@ -14,13 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-/*
- * The editor package provides simple wrappers for interacting with an
- * environment configured text editor.
- *
- * The editor command is taken from the environment variable EDITOR and
- * the package variable DefaultEditor will be used if EDITOR is not set.
- */
+// Package editor provides simple wrappers for interacting with an
+// environment configured text editor. The editor command is taken from the
+// environment variable EDITOR and the package variable DefaultEditor will be
+// used if EDITOR is not set.
 package editor
 
 import (

@@ -16,14 +16,37 @@ limitations under the License.
 
 package executor
 
+// A Try represents the result of a computation, which may return a value
+// or an error. The following represents the possible return values for
+// IsReturn, IsError, Get and Error:
+//
+//    Function | Success | Failure
+//    ---------|---------|--------
+//    IsReturn | true    | false
+//    IsError  | false   | true
+//    Get      | result  | panic
+//    Error    | panic   | error
 type Try interface {
+	// if true, the computation produced a return value
 	IsReturn() bool
+
+	// if true, the computation resulted in failure
 	IsError() bool
 
+	// Get returns the successul result of the computation.
+	// All calls to Get should be guarded by IsReturn; if the computation
+	// produced an error, calls to Get will panic.
 	Get() interface{}
+
+	// Error returns the error that caused the compuation to fail.
+	// All calls to Error should be guarded by IsError; if the computation
+	// succeeded, calls to Error will panic.
 	Error() error
 }
 
+// NewTry produces a Try based oen the given interface{} and error. If the
+// error is non-nil, a Try is returned for which IsError returns true.
+// Otherwise, a Try is returned for which IsReturn returns true.
 func NewTry(i interface{}, err error) Try {
 	if err != nil {
 		return &errorT{err}
@@ -32,20 +55,14 @@ func NewTry(i interface{}, err error) Try {
 	}
 }
 
+// NewReturn produces a Try representing a successful computation
 func NewReturn(i interface{}) Try {
 	return &returnT{i}
 }
 
+// NewError produces a Try representing a failed computation
 func NewError(err error) Try {
 	return &errorT{err}
-}
-
-type Return interface {
-	Try
-}
-
-type Error interface {
-	Try
 }
 
 type returnT struct {

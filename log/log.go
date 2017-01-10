@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Provides infrastructure for topic based logging to files.
+// Package log provides infrastructure for topic based logging to files.
 //
 // Currently all loggers must be specified through the Initialize call and each
 // may be accessed through package's Get. Before program termination Close

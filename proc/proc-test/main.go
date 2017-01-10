@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// proc-test is a trivial application that responds to signals such as those
+// sent by proc.LoggingCommand and proc.ManagedProc
 package main
 
 import (
@@ -32,9 +34,6 @@ const (
 
 	ReceivedFmt = "RECV'D: %v\n"
 )
-
-// proc-test is a trivial application that responds to signals such as those
-// sent by proc.LoggingCommand and proc.ManagedProc
 
 func usage() {
 	fmt.Printf("usage: %s <delay-in-seconds>\n", os.Args[0])

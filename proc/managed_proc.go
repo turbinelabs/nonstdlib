@@ -24,6 +24,7 @@ import (
 	"syscall"
 )
 
+// ManagedProc models a process under management.
 type ManagedProc interface {
 	// Start the process.
 	Start() error

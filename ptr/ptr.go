@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package ptr provides convenience and conversion methods for working
+// with pointer types. This package was initially forked/lifted from
+// https://github.com/aws/aws-sdk-go/blob/v1.1.35/aws/convert_types.go
+// and has since drifted to include a few other conversions.
 package ptr
 
 import "time"

@@ -14,12 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package dedupe comprises types and functions in support of removing
+// duplicates from a slice of a given type.
 package dedupe
 
 // Interface, if implemented, enables a struct to be used to remove entry
-// duplications in a slice. It is assumed that the slice the Interface allows
-// interaction with has all like objects grouped already. This need not be
-// sorted by that trivially fulfills the requirement.
+// duplications in a slice. It is assumed that the slice with which the
+// Interface allows interaction has all like objects grouped. This need not be
+// sorted but that trivially fulfills the requirement.
 type Interface interface {
 	Len() int
 	Equal(i, j int) bool

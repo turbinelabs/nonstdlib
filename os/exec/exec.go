@@ -14,10 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-/*
- * Extensions of the os/exec package that provides streamlined execution of
- * a command.
- */
+// Package exec provides extensions of the os/exec package that provides
+// streamlined execution of a command.
 package exec
 
 import (

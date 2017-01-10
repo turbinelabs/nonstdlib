@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package executor provides a mechanism for asyncronous execution of tasks,
+// using callbacks to indicate success or failure.
 package executor
 
 //go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE

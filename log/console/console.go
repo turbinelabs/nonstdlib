@@ -14,12 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Provides simple console logging to Stderr, configurable through a FlagSet.
+// Package console provides simple console logging to Stderr, configurable
+// through a FlagSet.
 // There are three levels of logging:
 //  - none
 //  - error
 //  - debug
-// The default log level is error
+// The default log level is error.
+//
+// Executable using the console package should include exactly one call to
+// Init() with the flag.FlagSet used to configure the executable, passed
+// prior to the FlagSet being parsed. Subsequently, calls to Error() and
+// Debug() will produce output to os.Stderr, based on the log-level configured.
 package console
 
 import (
@@ -62,7 +68,7 @@ func Debug() *log.Logger {
 	return nullLogger
 }
 
-// Init binds the log level to a flag in the given FlagSet
+// Init binds the log level to a flag in the given FlagSet.
 func Init(fs *flag.FlagSet) {
 	fs.Var(
 		&logLevelChoice,

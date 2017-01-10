@@ -123,6 +123,8 @@ func (c *cancelCounter) cancel() {
 
 var _ context.CancelFunc = (&cancelCounter{}).cancel
 
+// RetryingExecutorOptions are used to supply configuration for
+// NewRetryingExecutor.
 type RetryingExecutorOption func(*retryingExec)
 
 // Sets a Logger for panics recovered while executing actions.
