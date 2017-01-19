@@ -23,6 +23,7 @@ package os
 
 import (
 	"io"
+	"io/ioutil"
 	"os"
 )
 
@@ -112,4 +113,25 @@ func (_ goOS) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error
 
 func (_ goOS) NewDirReader(dir string) DirReader {
 	return NewDirReader(dir)
+}
+
+// ReadIfNonEmpty will read from an os.File only if non-empty; otherwise it will
+// return an empty string. Useful, particularly, for checking for input on
+// os.Stdin.
+func ReadIfNonEmpty(f *os.File) (string, error) {
+	st, err := f.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	if st.Size() == 0 {
+		return "", nil
+	}
+
+	bytes, err := ioutil.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bytes), nil
 }
