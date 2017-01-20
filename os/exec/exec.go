@@ -45,26 +45,38 @@ func ProcessErr(e error) error {
 // returns success (exit code 0) error is nil.
 //
 // In all cases the stdout and stderr from the executed command is returned.
-func Run(cmd string, args ...string) (string, string, error) {
-	execcmd := exec.Command(cmd, args...)
-
+func RunCmd(cmd *exec.Cmd) (string, string, error) {
 	stdoutBuffer := bytes.Buffer{}
-	execcmd.Stdout = &stdoutBuffer
+	cmd.Stdout = &stdoutBuffer
 
 	stderrBuffer := bytes.Buffer{}
-	execcmd.Stderr = &stderrBuffer
+	cmd.Stderr = &stderrBuffer
 
-	err := execcmd.Run()
+	err := cmd.Run()
 
 	return string(stdoutBuffer.Bytes()), string(stderrBuffer.Bytes()), ProcessErr(err)
 }
 
+// Run executes a command constructed from the string arguments, then returns
+// (stdout, stderr, error); if the process returns success (exit code 0) error
+// is nil.
+//
+// In all cases the stdout and stderr from the executed command is returned.
+func Run(cmd string, args ...string) (string, string, error) {
+	return RunCmd(exec.Command(cmd, args...))
+}
+
 // RunInTerm executes a command redirecting stderr, stdout, and stdin from the
 // active TERM.
+func RunCmdInTerm(cmd *exec.Cmd) error {
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	return ProcessErr(cmd.Run())
+}
+
+// RunInTerm executes a command constructed from the string arguments,
+// redirecting stderr, stdout, and stdin from the active TERM.
 func RunInTerm(cmd string, args ...string) error {
-	exccmd := exec.Command(cmd, args...)
-	exccmd.Stdout = os.Stdout
-	exccmd.Stdin = os.Stdin
-	exccmd.Stderr = os.Stderr
-	return ProcessErr(exccmd.Run())
+	return RunCmdInTerm(exec.Command(cmd, args...))
 }
