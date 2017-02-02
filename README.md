@@ -24,7 +24,7 @@ our [test package](https://github.com/turbinelabs/test) and
 [gomock](https://github.com/golang/mock).
 
 Where possible, we mirror the stdlib package naming, though in practice, we
-commonly import packages with a tbn prefix for clarity, eg:
+commonly import packages with a tbn prefix for clarity, e.g.:
 
 ```go
 import (
