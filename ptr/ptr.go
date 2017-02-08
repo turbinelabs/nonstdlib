@@ -204,6 +204,15 @@ func Int32(v int32) *int32 {
 	return &v
 }
 
+// Int32Value returns the value of the int32 pointer passed in or
+// 0 if the pointer is nil.
+func Int32Value(v *int32) int32 {
+	if v != nil {
+		return *v
+	}
+	return 0
+}
+
 // Int64 returns a pointer to the int64 value passed in.
 func Int64(v int64) *int64 {
 	return &v
@@ -261,6 +270,20 @@ func Int64ValueMap(src map[string]*int64) map[string]int64 {
 		}
 	}
 	return dst
+}
+
+// Uint64 returns a pointer to the uint64 value passed in.
+func Uint64(v uint64) *uint64 {
+	return &v
+}
+
+// Uint64Value returns the value of the uint64 pointer passed in or
+// 0 if the pointer is nil.
+func Uint64Value(v *uint64) uint64 {
+	if v != nil {
+		return *v
+	}
+	return 0
 }
 
 // Float64 returns a pointer to the float64 value passed in.
