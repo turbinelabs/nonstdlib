@@ -14,7 +14,7 @@
 # turbinelabs/nonstdlib
 
 [![Apache 2.0](https://img.shields.io/hexpm/l/plug.svg)](LICENSE)
-[![GoDoc](https://https://godoc.org/github.com/turbinelabs/nonstdlib?status.svg)](https://https://godoc.org/github.com/turbinelabs/nonstdlib)
+[![GoDoc](https://godoc.org/github.com/turbinelabs/nonstdlib?status.svg)](https://godoc.org/github.com/turbinelabs/nonstdlib)
 [![CircleCI](https://circleci.com/gh/turbinelabs/nonstdlib.svg?style=shield)](https://circleci.com/gh/turbinelabs/nonstdlib)
 
 The nonstdlib project comprises extensions to the Go stdlib, either to increase
