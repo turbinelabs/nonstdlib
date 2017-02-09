@@ -170,8 +170,8 @@ func Close() {
 	state.Close()
 }
 
-// A default handler that just logs the error and panics instead of trying
-// to recover or continue.
+// LogAndPanic is a default handler that just logs the error and
+// panics instead of trying to recover or continue.
 func LogAndPanic(topic string, prev io.WriteCloser, err error) io.WriteCloser {
 	log.Panicf("Could not open %s: %s", topic, err)
 	return nil
@@ -225,20 +225,20 @@ func newLogFile(root, file string) (io.WriteCloser, error) {
 // prefix of: "[in error: $topic] $originalPrefix"
 //
 // If the logger is set to operate on stdout only no action will be taken
-func (ls *loggerstate) reopenFile(
+func (s *loggerstate) reopenFile(
 	topic string,
 	cfg Config,
 	logger *log.Logger,
 ) {
 	// don't need to take any action -- only logging to stdout so there is no file
 	// file to reopen
-	if ls.stdoutOnly {
+	if s.stdoutOnly {
 		return
 	}
 
 	// save the old file to close
-	oldWriteCloser, hasOldFile := ls.openFiles[topic]
-	delete(ls.openFiles, topic)
+	oldWriteCloser, hasOldFile := s.openFiles[topic]
+	delete(s.openFiles, topic)
 
 	filename := string(topic) + ".log"
 	if cfg.Filename != "" {
@@ -249,7 +249,7 @@ func (ls *loggerstate) reopenFile(
 	var destWriter io.WriteCloser
 
 	// get a pointer to a new logfile
-	destWriter, err := ls.newLogFile(ls.logRoot, filename)
+	destWriter, err := s.newLogFile(s.logRoot, filename)
 
 	if err != nil {
 		// give the client a chance to decide how to recover
@@ -267,7 +267,7 @@ func (ls *loggerstate) reopenFile(
 	// even in the case that we got the old writer back we need to reinsert
 	// it since we previously removed it
 	if destWriter != nil {
-		ls.openFiles[topic] = destWriter
+		s.openFiles[topic] = destWriter
 	}
 
 	// if we don't have a valid writer by now fail to stderr and update prefix
@@ -322,7 +322,7 @@ func ToWriter(logger *log.Logger) io.Writer {
 
 // Failsafe is used to prevent dataloss in the case where a log client attempts
 // to access a log before it has been initialized.
-var Failsafe *log.Logger = log.New(os.Stderr, "failsafe: ", log.LstdFlags|log.Llongfile)
+var Failsafe = log.New(os.Stderr, "failsafe: ", log.LstdFlags|log.Llongfile)
 
 func topicalFailsafe(t string) *log.Logger {
 	return log.New(
@@ -356,7 +356,7 @@ func (s *loggerstate) Get(topic string) *log.Logger {
 //
 // NOTE: use of Get will acquire a read lock on the state mutex. This by itself
 // isn't problematic but when we are handling a SIGHUP we also acquire a lock
-// while we reopen log files. If Get usage is gonig to be frequent spend some
+// while we reopen log files. If Get usage is going to be frequent spend some
 // time to minimize that critical section.
 func Get(topic string) *log.Logger {
 	return state.Get(topic)

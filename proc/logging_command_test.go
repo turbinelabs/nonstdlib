@@ -52,7 +52,7 @@ func TestLoggingCmdStderr(t *testing.T) {
 	assert.Equal(t, output.String(), "[sh stderr] xypdq\n")
 }
 
-func testSignal(t *testing.T, f SignalFunc) (error, *procTestOutput) {
+func testSignal(t *testing.T, f SignalFunc) (*procTestOutput, error) {
 	logger, output := makeProcTestOutput()
 	exec, args := procTestAndArgs(10)
 	cmd := LoggingCommand(logger, exec, args...)
@@ -70,11 +70,11 @@ func testSignal(t *testing.T, f SignalFunc) (error, *procTestOutput) {
 	err = f(cmd)
 	assert.Nil(t, err)
 
-	return cmd.Wait(), output
+	return output, cmd.Wait()
 }
 
 func TestLoggingCmdKill(t *testing.T) {
-	waitErr, output := testSignal(
+	output, waitErr := testSignal(
 		t,
 		func(cmd *LoggingCmd) error {
 			return cmd.Kill()
@@ -89,7 +89,7 @@ func TestLoggingCmdKill(t *testing.T) {
 }
 
 func TestLoggingCmdQuit(t *testing.T) {
-	waitErr, output := testSignal(
+	output, waitErr := testSignal(
 		t,
 		func(cmd *LoggingCmd) error {
 			return cmd.Quit()

@@ -24,10 +24,11 @@ import (
 	"time"
 )
 
-// Integer time values larger than this are assumed to be in
-// milliseconds since the Unix epoch. Treated as millisecons since the
-// epoch, this timestamp represents 1973-01-11T16:26:24Z. Treated as
-// seconds, this timestamp represents 5000-01-01:00:00:00Z.
+// TimestampConversionFencepost represents an integer time value.
+// Values larger than this are assumed to be in milliseconds since the
+// Unix epoch. Treated as millisecons since the epoch, this timestamp
+// represents 1973-01-11T16:26:24Z. Treated as seconds, this timestamp
+// represents 5000-01-01:00:00:00Z.
 const TimestampConversionFencepost = int64(95617584000)
 
 // Timestamp conforms to the flag.Value and flag.Getter interfaces. It
@@ -50,10 +51,12 @@ type Timestamp struct {
 
 var _ flag.Getter = &Timestamp{}
 
+// NewTimestamp creates a new Timestamp with the given default time.
 func NewTimestamp(defaultTime time.Time) Timestamp {
 	return Timestamp{Value: defaultTime}
 }
 
+// Set sets the current value of the Timestamp.
 func (t *Timestamp) Set(value string) error {
 	if strings.ToLower(value) == "now" {
 		t.Value = time.Now()
@@ -76,10 +79,13 @@ func (t *Timestamp) Set(value string) error {
 	)
 }
 
+// Get retrieves the current value of the Timestamp.
 func (t *Timestamp) Get() interface{} {
 	return t.Value
 }
 
+// String returns the current value of the Timestamp as a string in
+// RFC33339 Nano format.
 func (t *Timestamp) String() string {
 	return t.Value.Format(time.RFC3339Nano)
 }

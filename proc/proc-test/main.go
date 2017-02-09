@@ -28,11 +28,11 @@ import (
 )
 
 const (
-	Ready    = "READY"
-	Done     = "DONE"
-	Signaled = "SIGNALED"
+	ready    = "READY"
+	done     = "DONE"
+	signaled = "SIGNALED"
 
-	ReceivedFmt = "RECV'D: %v\n"
+	receivedFmt = "RECV'D: %v\n"
 )
 
 func usage() {
@@ -53,13 +53,13 @@ func main() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGUSR1)
 
-	fmt.Println(Ready)
+	fmt.Println(ready)
 	timeout := time.After(time.Duration(delay) * time.Second)
 	select {
 	case s := <-signals:
-		fmt.Printf(ReceivedFmt, s)
-		fmt.Println(Signaled)
+		fmt.Printf(receivedFmt, s)
+		fmt.Println(signaled)
 	case <-timeout:
-		fmt.Println(Done)
+		fmt.Println(done)
 	}
 }

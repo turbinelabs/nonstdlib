@@ -22,8 +22,9 @@ import (
 )
 
 const (
-	// Format is the canonical format we want to display timestamps in. All
-	// timestamps within Turbine code should be UTC.
+	// TurbineFormat is the canonical format we want to display
+	// timestamps in. All timestamps within Turbine code should be
+	// UTC.
 	TurbineFormat = "2006-01-02 15:04:05.000"
 
 	microsPerSecond = int64(1000000)
@@ -45,7 +46,7 @@ func Equal(t, o *time.Time) bool {
 	}
 }
 
-// String uses the canonical Turbine time format and converts the *time.Time
+// Format uses the canonical Turbine time format and converts the *time.Time
 // to a string using it. Returns empty string if t is nil. If t is not nil we
 // also will force the timezone to be UTC before rendering to string.
 func Format(t *time.Time) string {
@@ -56,8 +57,8 @@ func Format(t *time.Time) string {
 	return t.UTC().Format(TurbineFormat)
 }
 
-// Parses a timestamp in the Turbine canonical format and returns a
-// pointer to the represented time. An empty string produces a nil
+// Parse takes a timestamp in the Turbine canonical format and returns
+// a pointer to the represented time. An empty string produces a nil
 // pointer; an error parsing the input produces a nil pointer and an
 // error.
 func Parse(s string) (*time.Time, error) {
@@ -85,10 +86,13 @@ func ToUnixMilli(t time.Time) int64 {
 	return t.UnixNano() / int64(millisPerNano)
 }
 
+// FromUnixMilli returns a time.Time from the given milliseconds from
+// "January 1, 1970 UTC". The timezone of the returns Time is UTC.
 func FromUnixMilli(millis int64) time.Time {
 	return time.Unix(millis/millisPerSecond, millis%millisPerSecond*millisPerNano).In(time.UTC)
 }
 
+// TruncUnixMilli truncates the given time to millisecond resolution.
 func TruncUnixMilli(t time.Time) time.Time {
 	if t.IsZero() {
 		return t
@@ -106,10 +110,13 @@ func ToUnixMicro(t time.Time) int64 {
 	return t.UnixNano() / int64(microsPerNano)
 }
 
+// FromUnixMicro returns a time.Time from the given microseconds from
+// "January 1, 1970 UTC". The timezone of the returns Time is UTC.
 func FromUnixMicro(micros int64) time.Time {
 	return time.Unix(micros/microsPerSecond, micros%microsPerSecond*microsPerNano).In(time.UTC)
 }
 
+// TruncUnixMicro truncates the given time to microsecond resolution.
 func TruncUnixMicro(t time.Time) time.Time {
 	if t.IsZero() {
 		return t
@@ -117,6 +124,7 @@ func TruncUnixMicro(t time.Time) time.Time {
 	return FromUnixMicro(ToUnixMicro(t))
 }
 
+// Min returns the earliest of several time.Time instances.
 func Min(a time.Time, bs ...time.Time) time.Time {
 	ts := append([]time.Time{a}, bs...)
 	ans := time.Time{}
@@ -132,6 +140,7 @@ func Min(a time.Time, bs ...time.Time) time.Time {
 	return ans
 }
 
+// Max returns the latest of several time.Time instances.
 func Max(a time.Time, bs ...time.Time) time.Time {
 	ans := a
 

@@ -18,9 +18,9 @@ limitations under the License.
 // duplicates from a slice of a given type.
 package dedupe
 
-// Interface, if implemented, enables a struct to be used to remove entry
-// duplications in a slice. It is assumed that the slice with which the
-// Interface allows interaction has all like objects grouped. This need not be
+// Interface enables a struct to be used to remove duplicate entries
+// in a slice. It is assumed that the slice with which the Interface
+// allows interaction has all like objects grouped. This need not be
 // sorted but that trivially fulfills the requirement.
 type Interface interface {
 	Len() int

@@ -23,6 +23,7 @@ import (
 	"strings"
 )
 
+// NotFound indicates no element matching a predicate was found.
 const NotFound = -1
 
 // ElementPredicate is a function that applies some predicate to an element of

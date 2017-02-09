@@ -41,11 +41,14 @@ func NewChoice(allowedValues ...string) Choice {
 	return Choice{AllowedValues: allowedValues}
 }
 
+// WithDefault assigns a default value. If value is not a valid choice
+// it is ignored.
 func (cv Choice) WithDefault(value string) Choice {
 	cv.Set(value)
 	return cv
 }
 
+// String returns the current value of the Choice.
 func (cv *Choice) String() string {
 	if cv.Choice != nil {
 		return *cv.Choice
@@ -53,6 +56,8 @@ func (cv *Choice) String() string {
 	return ""
 }
 
+// Set sets the current value of the Choice, returning an error if the
+// value is not one of the available choices.
 func (cv *Choice) Set(value string) error {
 	if indexof.String(cv.AllowedValues, value) == indexof.NotFound {
 		return fmt.Errorf(
@@ -66,6 +71,7 @@ func (cv *Choice) Set(value string) error {
 	return nil
 }
 
+// Get retrieves the current value of the Choice as an interface{}.
 func (cv *Choice) Get() interface{} {
 	return cv.Choice
 }

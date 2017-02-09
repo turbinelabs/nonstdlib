@@ -54,8 +54,8 @@ func NewStrings() Strings {
 	return Strings{Delimiter: ","}
 }
 
-// NewStrings produces a Strings with a set of allowed values and the
-// default delimiter (",").
+// NewStringsWithConstraint produces a Strings with a set of allowed
+// values and the default delimiter (",").
 func NewStringsWithConstraint(allowedValues ...string) Strings {
 	return Strings{AllowedValues: allowedValues, Delimiter: ","}
 }
@@ -65,9 +65,10 @@ func (ssv *Strings) String() string {
 	return strings.Join(ssv.Strings, ssv.Delimiter)
 }
 
-// Resets Strings for use and assigns the given values as the default
-// value. Any call to Set (e.g., via flag.FlagSet) will replace these
-// values. Default values are not checked against the AllowedValues.
+// ResetDefault resets Strings for use and assigns the given values as
+// the default value. Any call to Set (e.g., via flag.FlagSet) will
+// replace these values. Default values are not checked against the
+// AllowedValues.
 func (ssv *Strings) ResetDefault(values ...string) {
 	if values == nil {
 		ssv.Strings = []string{}
@@ -77,11 +78,11 @@ func (ssv *Strings) ResetDefault(values ...string) {
 	ssv.isSet = false
 }
 
-// Sets the value. The first call (after initialization or a call to
-// ResetDefault) will replace all current values. Subsequent calls
-// append values. This allows multiple values to be set with a single
-// command line flag, or the use of multiple instances of the flag to
-// append multiple values.
+// Set sets the current value. The first call (after initialization or
+// a call to ResetDefault) will replace all current values. Subsequent
+// calls append values. This allows multiple values to be set with a
+// single command line flag, or the use of multiple instances of the
+// flag to append multiple values.
 func (ssv *Strings) Set(value string) error {
 	parts := strings.Split(value, ssv.Delimiter)
 
@@ -120,6 +121,7 @@ func (ssv *Strings) Set(value string) error {
 	return nil
 }
 
+// Get retrieves the current value.
 func (ssv *Strings) Get() interface{} {
 	return ssv.Strings
 }

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Packge strings introduces additional utilities for dealing with strings and
+// Package strings introduces additional utilities for dealing with strings and
 // slices of strings.
 package strings
 

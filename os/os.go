@@ -59,59 +59,59 @@ func New() OS {
 
 type goOS struct{}
 
-func (_ goOS) Args() []string {
+func (x goOS) Args() []string {
 	return os.Args
 }
 
-func (_ goOS) Getenv(key string) string {
+func (x goOS) Getenv(key string) string {
 	return os.Getenv(key)
 }
 
-func (_ goOS) LookupEnv(key string) (string, bool) {
+func (x goOS) LookupEnv(key string) (string, bool) {
 	return os.LookupEnv(key)
 }
 
-func (_ goOS) Exit(code int) {
+func (x goOS) Exit(code int) {
 	os.Exit(code)
 }
 
-func (_ goOS) Stdin() io.Reader {
+func (x goOS) Stdin() io.Reader {
 	return os.Stdin
 }
 
-func (_ goOS) Stdout() io.Writer {
+func (x goOS) Stdout() io.Writer {
 	return os.Stdout
 }
 
-func (_ goOS) Stderr() io.Writer {
+func (x goOS) Stderr() io.Writer {
 	return os.Stderr
 }
 
-func (_ goOS) Stat(name string) (os.FileInfo, error) {
+func (x goOS) Stat(name string) (os.FileInfo, error) {
 	return os.Stat(name)
 }
 
-func (_ goOS) IsNotExist(err error) bool {
+func (x goOS) IsNotExist(err error) bool {
 	return os.IsNotExist(err)
 }
 
-func (_ goOS) Remove(name string) error {
+func (x goOS) Remove(name string) error {
 	return os.Remove(name)
 }
 
-func (_ goOS) Rename(oldpath, newpath string) error {
+func (x goOS) Rename(oldpath, newpath string) error {
 	return os.Rename(oldpath, newpath)
 }
 
-func (_ goOS) Open(name string) (*os.File, error) {
+func (x goOS) Open(name string) (*os.File, error) {
 	return os.Open(name)
 }
 
-func (_ goOS) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+func (x goOS) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
 	return os.OpenFile(name, flag, perm)
 }
 
-func (_ goOS) NewDirReader(dir string) DirReader {
+func (x goOS) NewDirReader(dir string) DirReader {
 	return NewDirReader(dir)
 }
 

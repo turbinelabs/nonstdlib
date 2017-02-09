@@ -123,27 +123,28 @@ func (c *cancelCounter) cancel() {
 
 var _ context.CancelFunc = (&cancelCounter{}).cancel
 
-// RetryingExecutorOptions are used to supply configuration for
+// RetryingExecutorOption is used to supply configuration for
 // NewRetryingExecutor.
 type RetryingExecutorOption func(*retryingExec)
 
-// Sets a Logger for panics recovered while executing actions.
+// WithLogger sets a Logger for panics recovered while executing
+// actions.
 func WithLogger(log *log.Logger) RetryingExecutorOption {
 	return func(q *retryingExec) {
 		q.log = log
 	}
 }
 
-// Sets the DelayFunc used when retrying actions.
+// WithRetryDelayFunc sets the DelayFunc used when retrying actions.
 func WithRetryDelayFunc(d DelayFunc) RetryingExecutorOption {
 	return func(q *retryingExec) {
 		q.delay = d
 	}
 }
 
-// Sets the absolute maximum number of attempts made to complete an
-// action (including the initial attempt). Values less than 1 act as
-// if 1 had been passed.
+// WithMaxAttempts sets the absolute maximum number of attempts made
+// to complete an action (including the initial attempt). Values less
+// than 1 act as if 1 had been passed.
 func WithMaxAttempts(maxAttempts int) RetryingExecutorOption {
 	if maxAttempts < 1 {
 		maxAttempts = 1
@@ -154,9 +155,9 @@ func WithMaxAttempts(maxAttempts int) RetryingExecutorOption {
 	}
 }
 
-// Sets the number of goroutines used to execute actions. No more than
-// this many actions can be executing at once. Values less than 1 act
-// as if 1 has been passed.
+// WithParallelism sets the number of goroutines used to execute
+// actions. No more than this many actions can be executing at
+// once. Values less than 1 act as if 1 has been passed.
 func WithParallelism(parallelism int) RetryingExecutorOption {
 	if parallelism < 1 {
 		parallelism = 1
@@ -167,10 +168,10 @@ func WithParallelism(parallelism int) RetryingExecutorOption {
 	}
 }
 
-// Sets the maximum number of actions pending immediate execution. If
-// all worker goroutines are processing actions, the number of items
-// that can be pending execution (initial or retry) before blocking
-// occurs.
+// WithMaxQueueDepth sets the maximum number of actions pending
+// immediate execution. If all worker goroutines are processing
+// actions, the number of items that can be pending execution (initial
+// or retry) before blocking occurs.
 func WithMaxQueueDepth(maxQueueDepth int) RetryingExecutorOption {
 	if maxQueueDepth < 1 {
 		maxQueueDepth = 1
@@ -181,10 +182,10 @@ func WithMaxQueueDepth(maxQueueDepth int) RetryingExecutorOption {
 	}
 }
 
-// Sets the timeout for completion of actions. If the action has not
-// completed (including retries) within the given duration, it is
-// canceled. Timeouts less than or equal to zero are treated as "no
-// time out."
+// WithTimeout sets the timeout for completion of actions. If the
+// action has not completed (including retries) within the given
+// duration, it is canceled. Timeouts less than or equal to zero are
+// treated as "no time out."
 func WithTimeout(timeout time.Duration) RetryingExecutorOption {
 	if timeout <= noTimeout {
 		timeout = noTimeout
@@ -195,10 +196,10 @@ func WithTimeout(timeout time.Duration) RetryingExecutorOption {
 	}
 }
 
-// Sets the timeout for completion individual attempts of an
-// action. If the attempt has not completed within the given duration,
-// it is canceled (and potentially retried). Timeouts less than or
-// equal to zero are treated as "no time out."
+// WithAttemptTimeout sets the timeout for completion individual
+// attempts of an action. If the attempt has not completed within the
+// given duration, it is canceled (and potentially retried). Timeouts
+// less than or equal to zero are treated as "no time out."
 func WithAttemptTimeout(timeout time.Duration) RetryingExecutorOption {
 	if timeout <= noTimeout {
 		timeout = noTimeout
@@ -209,8 +210,8 @@ func WithAttemptTimeout(timeout time.Duration) RetryingExecutorOption {
 	}
 }
 
-// Constructs a new Executor. By default, it never retries, has
-// parallelism of 1, and a maximum queue depth of 10.
+// NewRetryingExecutor constructs a new Executor. By default, it never
+// retries, has parallelism of 1, and a maximum queue depth of 10.
 func NewRetryingExecutor(options ...RetryingExecutorOption) Executor {
 	q := &retryingExec{
 		deadlineChan:   make(chan time.Time, 2),
@@ -556,7 +557,7 @@ func (q *retryingExec) rescuedCall(f Func, ctxt context.Context) (t Try) {
 				t = NewError(errors.New(s.String()))
 
 			default:
-				t = NewError(errors.New(fmt.Sprintf("%#v", p)))
+				t = NewError(fmt.Errorf("%#v", p))
 			}
 
 		}

@@ -23,32 +23,32 @@ import (
 	"os"
 )
 
-type LogWriterState struct {
+type logWriterState struct {
 	buffer []byte
 	pos    int
 	end    int
 	cap    int
 }
 
-// Copies data written to pipe (normally from an os.Process) to the
-// given log (or the default log).
+// LogWriter copies data written to pipe (normally from an os.Process)
+// to the given log (or the default log).
 type LogWriter struct {
 	prefix string
 	logger *log.Logger
-	state  *LogWriterState
+	state  *logWriterState
 }
 
 var _ io.WriteCloser = LogWriter{}
 var _ io.ReaderFrom = LogWriter{}
 
-// Creates a new LogWriter that emits lines to the given logger with
-// the given prefix.
+// NewLogWriter creates a new LogWriter that emits lines to the given
+// logger with the given prefix.
 func NewLogWriter(logger *log.Logger, prefix string) LogWriter {
-	return LogWriter{prefix: prefix, logger: logger, state: &LogWriterState{}}
+	return LogWriter{prefix: prefix, logger: logger, state: &logWriterState{}}
 }
 
-// Creates a new LogWriter that emits lines to the default logger
-// (on stderr) with the given prefix.
+// NewDefaultLogWriter creates a new LogWriter that emits lines to the
+// default logger (on stderr) with the given prefix.
 func NewDefaultLogWriter(prefix string) LogWriter {
 	logger := log.New(os.Stderr, log.Prefix(), log.Flags())
 	return NewLogWriter(logger, prefix)
@@ -58,6 +58,7 @@ func (w LogWriter) log(line string) {
 	w.logger.Printf("%s%s", w.prefix, line)
 }
 
+// Close closes the LogWriter and emits any buffered data.
 func (w LogWriter) Close() error {
 	s := w.state
 	if s.buffer != nil && s.end > s.pos {
@@ -66,6 +67,10 @@ func (w LogWriter) Close() error {
 	return nil
 }
 
+// Write writes data to the LogWriter. Data is line buffered before
+// being emitted. Partial lines are held until a subsequent call to
+// Write that includes a new line character, or a subsequent call to
+// Close.
 func (w LogWriter) Write(b []byte) (int, error) {
 	s := w.state
 
@@ -120,6 +125,7 @@ func (w LogWriter) Write(b []byte) (int, error) {
 	return num, nil
 }
 
+// ReadFrom reads as much data as possible from the given io.Reader.
 func (w LogWriter) ReadFrom(r io.Reader) (int64, error) {
 	var read int64
 	scanner := bufio.NewScanner(r)

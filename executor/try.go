@@ -16,7 +16,7 @@ limitations under the License.
 
 package executor
 
-// A Try represents the result of a computation, which may return a value
+// Try represents the result of a computation, which may return a value
 // or an error. The following represents the possible return values for
 // IsReturn, IsError, Get and Error:
 //
@@ -50,9 +50,9 @@ type Try interface {
 func NewTry(i interface{}, err error) Try {
 	if err != nil {
 		return &errorT{err}
-	} else {
-		return &returnT{i}
 	}
+
+	return &returnT{i}
 }
 
 // NewReturn produces a Try representing a successful computation

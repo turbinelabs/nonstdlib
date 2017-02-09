@@ -41,8 +41,8 @@ func ProcessErr(e error) error {
 	return nil
 }
 
-// Run executes a command then returns (stdout, stderr, error); if the process
-// returns success (exit code 0) error is nil.
+// RunCmd executes a command then returns (stdout, stderr, error); if
+// the process returns success (exit code 0) error is nil.
 //
 // In all cases the stdout and stderr from the executed command is returned.
 func RunCmd(cmd *exec.Cmd) (string, string, error) {
@@ -66,8 +66,8 @@ func Run(cmd string, args ...string) (string, string, error) {
 	return RunCmd(exec.Command(cmd, args...))
 }
 
-// RunInTerm executes a command redirecting stderr, stdout, and stdin from the
-// active TERM.
+// RunCmdInTerm executes a command redirecting stderr, stdout, and
+// stdin from the active TERM.
 func RunCmdInTerm(cmd *exec.Cmd) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin

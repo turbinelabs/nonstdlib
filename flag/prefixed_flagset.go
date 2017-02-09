@@ -52,6 +52,7 @@ func (f *PrefixedFlagSet) mkUsage(usage string) string {
 	return strings.Replace(usage, "{{NAME}}", f.descriptor, -1)
 }
 
+// Var wraps the underlying FlagSet's Var function.
 func (f *PrefixedFlagSet) Var(value flag.Value, name string, usage string) {
 	f.FlagSet.Var(value, f.prefix+name, f.mkUsage(usage))
 }

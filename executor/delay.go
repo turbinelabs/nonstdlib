@@ -21,16 +21,17 @@ import (
 	"time"
 )
 
-// Invoked to compute a new deadline. The value passed is the number
-// of times the action has been previously attempted. It is always
-// greater than or equal to 1.
+// DelayFunc is invoked to compute a new deadline. The value passed is
+// the number of times the action has been previously attempted. It is
+// always greater than or equal to 1.
 type DelayFunc func(int) time.Duration
 
-// Creates a new DelayFunc where the first retry occurs after a
-// duration of delay and each subsequent retry is delayed by twice the
-// previous delay. E.g., given a delay of 1s, the delays for retries
-// are 1s, 2s, 4s, 8s, ... The return value is capped at the specified
-// maximum delay. Delays of less than 0 are treated as 0.
+// NewExponentialDelayFunc creates a new DelayFunc where the first
+// retry occurs after a duration of delay and each subsequent retry is
+// delayed by twice the previous delay. E.g., given a delay of 1s, the
+// delays for retries are 1s, 2s, 4s, 8s, ... The return value is
+// capped at the specified maximum delay. Delays of less than 0 are
+// treated as 0.
 func NewExponentialDelayFunc(delay time.Duration, maxDelay time.Duration) DelayFunc {
 	if delay <= 0 {
 		return NewConstantDelayFunc(0)
@@ -65,7 +66,8 @@ func NewExponentialDelayFunc(delay time.Duration, maxDelay time.Duration) DelayF
 	}
 }
 
-// Creates a DelayFunc where all retries occur after a fixed delay.
+// NewConstantDelayFunc creates a DelayFunc where all retries occur
+// after a fixed delay.
 func NewConstantDelayFunc(delay time.Duration) DelayFunc {
 	if delay < 0 {
 		delay = 0

@@ -27,10 +27,16 @@ import (
 	tbnflag "github.com/turbinelabs/nonstdlib/flag"
 )
 
+// DelayType represents an algorithm for computing retry delays.
 type DelayType string
 
 const (
-	ConstantDelayType    DelayType = "constant"
+	// ConstantDelayType specifies a constant delay between
+	// retries.
+	ConstantDelayType DelayType = "constant"
+
+	// ExponentialDelayType specifies an exponentially increasing
+	// delay between retries.
 	ExponentialDelayType DelayType = "exponential"
 
 	flagDefaultDelayType      = ExponentialDelayType
@@ -63,14 +69,14 @@ type FromFlagsDefaults struct {
 	AttemptTimeout time.Duration
 }
 
-// Constructs a FromFlags with application-agnostic default flag
-// values. Most callers should use NewFromFlagsWithDefaults.
+// NewFromFlags constructs a FromFlags with application-agnostic
+// default flag values. Most callers should use NewFromFlagsWithDefaults.
 func NewFromFlags(f *tbnflag.PrefixedFlagSet) FromFlags {
 	return NewFromFlagsWithDefaults(f, FromFlagsDefaults{})
 }
 
-// Constructs a FromFlags with application-provided default flag
-// values.
+// NewFromFlagsWithDefaults constructs a FromFlags with
+// application-provided default flag values.
 func NewFromFlagsWithDefaults(
 	f *tbnflag.PrefixedFlagSet,
 	defaults FromFlagsDefaults,
@@ -145,7 +151,8 @@ func NewFromFlagsWithDefaults(
 	return ff
 }
 
-// If not overridden, the default delay type is exponential.
+// DefaultDelayType returns the default delay type. If not overriden
+// the default delay type is ExponentialDelayType.
 func (defaults FromFlagsDefaults) DefaultDelayType() DelayType {
 	if defaults.DelayType != DelayType("") {
 		return defaults.DelayType
@@ -153,7 +160,8 @@ func (defaults FromFlagsDefaults) DefaultDelayType() DelayType {
 	return flagDefaultDelayType
 }
 
-// If not overridden, the default initial delay is 100 milliseconds.
+// DefaultInitialDelay returns the default initial delay. If not
+// overridden, the default initial delay is 100 milliseconds.
 func (defaults FromFlagsDefaults) DefaultInitialDelay() time.Duration {
 	if defaults.InitialDelay != 0 {
 		return defaults.InitialDelay
@@ -161,7 +169,8 @@ func (defaults FromFlagsDefaults) DefaultInitialDelay() time.Duration {
 	return flagDefaultInitialDelay
 }
 
-// If not overridden, the default maximum delay is 30 seconds.
+// DefaultMaxDelay returns the default maximum delay. If not
+// overridden, the default maximum delay is 30 seconds.
 func (defaults FromFlagsDefaults) DefaultMaxDelay() time.Duration {
 	if defaults.MaxDelay != 0 {
 		return defaults.MaxDelay
@@ -169,7 +178,8 @@ func (defaults FromFlagsDefaults) DefaultMaxDelay() time.Duration {
 	return flagDefaultMaxDelay
 }
 
-// If not overridden, the default max attempts is 8.
+// DefaultMaxAttempts returns the default maximum number of
+// attempts. If not overridden, the default max attempts is 8.
 func (defaults FromFlagsDefaults) DefaultMaxAttempts() int {
 	if defaults.MaxAttempts != 0 {
 		return defaults.MaxAttempts
@@ -178,8 +188,9 @@ func (defaults FromFlagsDefaults) DefaultMaxAttempts() int {
 	return flagDefaultMaxAttempts
 }
 
-// If not overridden, the default max queue depth is 20 times the
-// number of system CPU cores.
+// DefaultMaxQueueDepth returns the default maximum queue depth. If
+// not overridden, the default max queue depth is 20 times the number
+// of system CPU cores.
 func (defaults FromFlagsDefaults) DefaultMaxQueueDepth() int {
 	if defaults.MaxQueueDepth != 0 {
 		return defaults.MaxQueueDepth
@@ -188,8 +199,9 @@ func (defaults FromFlagsDefaults) DefaultMaxQueueDepth() int {
 	return runtime.NumCPU() * 20
 }
 
-// If not overridden, the default parallelism is 2 times the number of
-// system CPU cores.
+// DefaultParallelism returns the default parallelism. If not
+// overridden, the default parallelism is 2 times the number of system
+// CPU cores.
 func (defaults FromFlagsDefaults) DefaultParallelism() int {
 	if defaults.Parallelism != 0 {
 		return defaults.Parallelism
@@ -198,7 +210,8 @@ func (defaults FromFlagsDefaults) DefaultParallelism() int {
 	return runtime.NumCPU() * 2
 }
 
-// If not overridden, the default timeout is 0 (timeouts disabled).
+// DefaultTimeout returns the default global timeout. If not
+// overridden, the default timeout is 0 (timeouts disabled).
 func (defaults FromFlagsDefaults) DefaultTimeout() time.Duration {
 	if defaults.Timeout != 0 {
 		return defaults.Timeout
@@ -207,8 +220,9 @@ func (defaults FromFlagsDefaults) DefaultTimeout() time.Duration {
 	return flagDefaultTimeout
 }
 
-// If not overridden, the default attempt timeout is 0 (attempt
-// timeouts disabled).
+// DefaultAttemptTimeout returns the default per-attempt timeout. If
+// not overridden, the default attempt timeout is 0 (attempt timeouts
+// disabled).
 func (defaults FromFlagsDefaults) DefaultAttemptTimeout() time.Duration {
 	if defaults.AttemptTimeout != 0 {
 		return defaults.AttemptTimeout

@@ -40,21 +40,21 @@ type ControlledSource interface {
 	Advance(time.Duration)
 }
 
-// Creates a new Source for normal use. The Source's Now method
-// returns the current time.
+// NewSource creates a new Source for normal use. The Source's Now
+// method returns the current time.
 func NewSource() Source {
 	return defaultTimeSourceInstance
 }
 
-// Creates a new ControlledSource with the given time and passes it to
-// the given function for testing.
+// WithTimeAt creates a new ControlledSource with the given time and
+// passes it to the given function for testing.
 func WithTimeAt(t time.Time, f func(ControlledSource)) {
 	s := &controlledTimeSource{now: t}
 	f(s)
 }
 
-// Creates a new ControlledSource with the current time and passes it
-// to the given function for testing.
+// WithCurrentTimeFrozen Creates a new ControlledSource with the
+// current time and passes it to the given function for testing.
 func WithCurrentTimeFrozen(f func(ControlledSource)) {
 	WithTimeAt(time.Now(), f)
 }

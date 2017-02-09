@@ -25,14 +25,21 @@ import (
 
 const numEntriesPerRead = 32
 
+// DirEntryFilter is a function that filters directory entries by
+// returning true for directories that should be accepted.
 type DirEntryFilter func(os.FileInfo) bool
 
+// DirReader reads or reads and filters directory entries.
 type DirReader interface {
+	// Read reads all entries from the directory.
 	Read() ([]string, error)
 
+	// Filter returns all entries from the directory that match
+	// the given filter.
 	Filter(DirEntryFilter) ([]string, error)
 }
 
+// NewDirReader constructs a new DirReader for the given path name.
 func NewDirReader(pathname string) DirReader {
 	return &dirReader{pathname}
 }

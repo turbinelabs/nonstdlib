@@ -31,8 +31,8 @@ type Timer interface {
 	Stop() bool
 }
 
-// Creates a new Timer, wrapping a time.Timer that will expire after
-// the given duration.
+// NewTimer creates a new Timer, wrapping a time.Timer that will
+// expire after the given duration.
 func NewTimer(d time.Duration) Timer {
 	return &timer{time.NewTimer(d)}
 }

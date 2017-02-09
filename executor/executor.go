@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package executor provides a mechanism for asyncronous execution of tasks,
+// Package executor provides a mechanism for asynchronous execution of tasks,
 // using callbacks to indicate success or failure.
 package executor
 
@@ -26,18 +26,18 @@ import (
 	"github.com/turbinelabs/nonstdlib/stats"
 )
 
-// Invoked to execute an action. The given Context should be used to
-// make HTTP requests. The function should return as soon as possible
-// if the context's Done channel is closed. Must return a nil error if
-// the action succeeded. Return an error to try again later.
+// Func is invoked to execute an action. The given Context should be
+// used to make HTTP requests. The function should return as soon as
+// possible if the context's Done channel is closed. Must return a nil
+// error if the action succeeded. Return an error to try again later.
 type Func func(context.Context) (interface{}, error)
 
-// Invoked at most once to return the result of Func.
+// CallbackFunc is invoked at most once to return the result of Func.
 type CallbackFunc func(Try)
 
-// Invoked at most once each for functions invoked via a single
-// ExecMany call. Each invocation includes the index of the function
-// in ExecMany's array argument.
+// ManyCallbackFunc invoked at most once each for functions invoked
+// via a single ExecMany call. Each invocation includes the index of
+// the function in ExecMany's array argument.
 type ManyCallbackFunc func(int, Try)
 
 // Executor invokes functions asynchronously with callbacks on

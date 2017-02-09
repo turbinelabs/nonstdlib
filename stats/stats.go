@@ -28,19 +28,20 @@ type Stats interface {
 	TimingDuration(string, time.Duration) error
 }
 
-// Creates a do-nothing Stats.
+// NewNoopStats creates a do-nothing Stats.
 func NewNoopStats() Stats {
 	return &noopStats{}
 }
 
 type noopStats struct{}
 
-func (_ *noopStats) Inc(_ string, _ int64) error                    { return nil }
-func (_ *noopStats) Gauge(_ string, _ int64) error                  { return nil }
-func (_ *noopStats) TimingDuration(_ string, _ time.Duration) error { return nil }
+func (n *noopStats) Inc(_ string, _ int64) error                    { return nil }
+func (n *noopStats) Gauge(_ string, _ int64) error                  { return nil }
+func (n *noopStats) TimingDuration(_ string, _ time.Duration) error { return nil }
 
-// Creates a Stats implementation that forwards all calls to an
-// underlying Stats using goroutines. All methods always return nil.
+// NewAsyncStats creates a Stats implementation that forwards all
+// calls to an underlying Stats using goroutines. All methods always
+// return nil.
 func NewAsyncStats(s Stats) Stats {
 	return &asyncStats{underlying: s}
 }

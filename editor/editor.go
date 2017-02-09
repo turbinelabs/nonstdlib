@@ -38,8 +38,8 @@ var (
 	// DefaultEditor is used if the user does not have EDITOR specified.
 	DefaultEditor = ""
 
-	// NoEditor indicates that no EDITOR was set in the environment.
-	NoEditor = errors.New("could not find " + EditorVar + "environment variable")
+	// ErrNoEditor indicates that no EDITOR was set in the environment.
+	ErrNoEditor = errors.New("could not find " + EditorVar + "environment variable")
 )
 
 // Get returns the editor that will be used as determined by reading the
@@ -56,7 +56,7 @@ func getEditor() (string, []string, error) {
 		edit = DefaultEditor
 	}
 	if edit == "" {
-		return "", nil, NoEditor
+		return "", nil, ErrNoEditor
 	}
 	parts := strings.Split(edit, " ")
 
