@@ -79,6 +79,8 @@ Each package is best described in its respective Godoc:
   provides convenience and conversion methods for working with pointer types
 - [`stats`](https://godoc.org/github.com/turbinelabs/nonstdlib/stats):
   provides an interface for reporting simple statistics
+- [`strings`](https://godoc.org/github.com/turbinelabs/nonstdlib/strings):
+  provides convenience methods for working with strings and string slices
 - [`time`](https://godoc.org/github.com/turbinelabs/nonstdlib/time):
   provides utility functions for go time.Time instances
 
