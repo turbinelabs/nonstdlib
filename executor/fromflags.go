@@ -151,7 +151,7 @@ func NewFromFlagsWithDefaults(
 	return ff
 }
 
-// DefaultDelayType returns the default delay type. If not overriden
+// DefaultDelayType returns the default delay type. If not overridden
 // the default delay type is ExponentialDelayType.
 func (defaults FromFlagsDefaults) DefaultDelayType() DelayType {
 	if defaults.DelayType != DelayType("") {
