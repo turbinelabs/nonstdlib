@@ -80,3 +80,20 @@ func Enumerate(flagset *flag.FlagSet) []*flag.Flag {
 	})
 	return flags
 }
+
+// IsSet indicates whether a given Flag in a FlagSet has been set or
+// not. The name should be the same value (case-sensitive) as that
+// passed to the FlagSet methods for constructing flags.
+func IsSet(flagset *flag.FlagSet, name string) bool {
+	if flagset == nil {
+		return false
+	}
+
+	found := false
+	flagset.Visit(func(flag *flag.Flag) {
+		if flag.Name == name {
+			found = true
+		}
+	})
+	return found
+}

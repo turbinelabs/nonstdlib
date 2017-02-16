@@ -53,12 +53,14 @@ func TestFromEnvAllFlagsEmpty(t *testing.T) {
 }
 
 func TestFromEnvAllFlags(t *testing.T) {
-	fs, _, _ := testFlags()
+	fs, _, _, _ := testFlags()
 	got := NewFromEnv(fs).AllFlags()
-	assert.Equal(t, len(got), 2)
-	assert.True(t,
-		(got[0].Name == "foo-baz" && got[1].Name == "bar") ||
-			(got[0].Name == "bar" && got[1].Name == "foo-baz"),
+	assert.Equal(t, len(got), 3)
+	names := []string{got[0].Name, got[1].Name, got[2].Name}
+	assert.HasSameElements(
+		t,
+		names,
+		[]string{"foo-baz", "bar", "qux"},
 	)
 }
 
@@ -69,8 +71,9 @@ func TestFillFromEnvAllUnset(t *testing.T) {
 	mockOS := tbnos.NewMockOS(ctrl)
 	mockOS.EXPECT().LookupEnv("FOO_BAR_FOO_BAZ").Return("", true)
 	mockOS.EXPECT().LookupEnv("FOO_BAR_BAR").Return("", false)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_QUX").Return("", false)
 
-	fs, fooFlag, barFlag := testFlags()
+	fs, fooFlag, barFlag, quxFlag := testFlags()
 	*fooFlag = "foo-default"
 	*barFlag = "bar-default"
 	fs.Parse([]string{})
@@ -82,6 +85,7 @@ func TestFillFromEnvAllUnset(t *testing.T) {
 
 	assert.Equal(t, *fooFlag, "")
 	assert.Equal(t, *barFlag, "bar-default")
+	assert.Equal(t, *quxFlag, "qux-default")
 	assert.DeepEqual(t, fe.Filled(), map[string]string{
 		"FOO_BAR_FOO_BAZ": "",
 	})
@@ -93,8 +97,9 @@ func TestFillFromEnvOneSet(t *testing.T) {
 
 	mockOS := tbnos.NewMockOS(ctrl)
 	mockOS.EXPECT().LookupEnv("FOO_BAR_BAR").Return("", false)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_QUX").Return("", false)
 
-	fs, fooFlag, barFlag := testFlags()
+	fs, fooFlag, barFlag, _ := testFlags()
 	fs.Parse([]string{"--foo-baz=blargo"})
 
 	fe := NewFromEnv(fs, "foo", "bar").(fromEnv)
