@@ -29,7 +29,6 @@ limitations under the License.
 package console
 
 import (
-	"flag"
 	"io/ioutil"
 	"log"
 	"os"
@@ -69,7 +68,7 @@ func Debug() *log.Logger {
 }
 
 // Init binds the log level to a flag in the given FlagSet.
-func Init(fs *flag.FlagSet) {
+func Init(fs tbnflag.FlagSet) {
 	fs.Var(
 		&logLevelChoice,
 		"console.level",

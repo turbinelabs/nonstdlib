@@ -35,7 +35,7 @@ type prefixedFlagTestCase struct {
 	name     string
 	flagType reflect.Type
 
-	addFlag func(f *PrefixedFlagSet) interface{}
+	addFlag func(f *prefixedFlagSet) interface{}
 }
 
 type stringValue struct {
@@ -56,7 +56,7 @@ var _ flag.Value = &stringValue{}
 func (tc *prefixedFlagTestCase) run(t testing.TB) {
 	fs := flag.NewFlagSet("generated code: "+tc.name, flag.PanicOnError)
 
-	pfs := NewPrefixedFlagSet(fs, "theprefix", "the-app-name")
+	pfs := newPrefixedFlagSet(fs, "theprefix", "the-app-name")
 
 	target := tc.addFlag(pfs)
 
@@ -133,7 +133,7 @@ func TestVar(t *testing.T) {
 	testCase := prefixedFlagTestCase{
 		name:     "var",
 		flagType: reflect.TypeOf(string(0)),
-		addFlag: func(f *PrefixedFlagSet) interface{} {
+		addFlag: func(f *prefixedFlagSet) interface{} {
 			var target stringValue
 			f.Var(&target, "var", "a flag for {{NAME}}")
 			return &target
@@ -144,14 +144,22 @@ func TestVar(t *testing.T) {
 
 func TestScope(t *testing.T) {
 	fs := flag.NewFlagSet("scoping test", flag.PanicOnError)
-	underlying := NewPrefixedFlagSet(fs, "theprefix", "the-app-name")
+	underlying := newPrefixedFlagSet(fs, "theprefix", "the-app-name")
 	pfs := underlying.Scope("scope", "scope-name")
-	assert.SameInstance(t, pfs.FlagSet, fs)
-	assert.Equal(t, pfs.prefix, "theprefix.scope.")
-	assert.Equal(t, pfs.descriptor, "scope-name")
+	assert.SameInstance(t, pfs.Unwrap(), fs)
+	pfsImpl := pfs.(*prefixedFlagSet)
+	assert.Equal(t, pfsImpl.prefix, "theprefix.scope.")
+	assert.Equal(t, pfsImpl.descriptor, "scope-name")
 
 	pfs = underlying.Scope("scope.", "scope-name")
-	assert.SameInstance(t, pfs.FlagSet, fs)
-	assert.Equal(t, pfs.prefix, "theprefix.scope.")
-	assert.Equal(t, pfs.descriptor, "scope-name")
+	assert.SameInstance(t, pfs.Unwrap(), fs)
+	pfsImpl = pfs.(*prefixedFlagSet)
+	assert.Equal(t, pfsImpl.prefix, "theprefix.scope.")
+	assert.Equal(t, pfsImpl.descriptor, "scope-name")
+
+	pfs = underlying.Scope("scope.", "{{NAME}}: scope-name")
+	assert.SameInstance(t, pfs.Unwrap(), fs)
+	pfsImpl = pfs.(*prefixedFlagSet)
+	assert.Equal(t, pfsImpl.prefix, "theprefix.scope.")
+	assert.Equal(t, pfsImpl.descriptor, "the-app-name: scope-name")
 }

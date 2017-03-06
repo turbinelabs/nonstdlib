@@ -28,7 +28,7 @@ var (
 		{
 			name:     "bool",
 			flagType: reflect.TypeOf(false),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.Bool(
 					"bool",
 					false,
@@ -39,7 +39,7 @@ var (
 		{
 			name:     "bool-var",
 			flagType: reflect.TypeOf(false),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target bool
 				f.BoolVar(
 					&target,
@@ -53,7 +53,7 @@ var (
 		{
 			name:     "duration",
 			flagType: reflect.TypeOf(time.Duration(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.Duration(
 					"duration",
 					time.Duration(0),
@@ -64,7 +64,7 @@ var (
 		{
 			name:     "duration-var",
 			flagType: reflect.TypeOf(time.Duration(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target time.Duration
 				f.DurationVar(
 					&target,
@@ -78,7 +78,7 @@ var (
 		{
 			name:     "float64",
 			flagType: reflect.TypeOf(float64(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.Float64(
 					"float64",
 					float64(0),
@@ -89,7 +89,7 @@ var (
 		{
 			name:     "float64-var",
 			flagType: reflect.TypeOf(float64(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target float64
 				f.Float64Var(
 					&target,
@@ -103,7 +103,7 @@ var (
 		{
 			name:     "int",
 			flagType: reflect.TypeOf(int(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.Int(
 					"int",
 					int(0),
@@ -114,7 +114,7 @@ var (
 		{
 			name:     "int-var",
 			flagType: reflect.TypeOf(int(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target int
 				f.IntVar(
 					&target,
@@ -128,7 +128,7 @@ var (
 		{
 			name:     "int64",
 			flagType: reflect.TypeOf(int64(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.Int64(
 					"int64",
 					int64(0),
@@ -139,7 +139,7 @@ var (
 		{
 			name:     "int64-var",
 			flagType: reflect.TypeOf(int64(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target int64
 				f.Int64Var(
 					&target,
@@ -153,7 +153,7 @@ var (
 		{
 			name:     "string",
 			flagType: reflect.TypeOf(string(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.String(
 					"string",
 					string(0),
@@ -164,7 +164,7 @@ var (
 		{
 			name:     "string-var",
 			flagType: reflect.TypeOf(string(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target string
 				f.StringVar(
 					&target,
@@ -178,7 +178,7 @@ var (
 		{
 			name:     "uint",
 			flagType: reflect.TypeOf(uint(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.Uint(
 					"uint",
 					uint(0),
@@ -189,7 +189,7 @@ var (
 		{
 			name:     "uint-var",
 			flagType: reflect.TypeOf(uint(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target uint
 				f.UintVar(
 					&target,
@@ -203,7 +203,7 @@ var (
 		{
 			name:     "uint64",
 			flagType: reflect.TypeOf(uint64(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				return f.Uint64(
 					"uint64",
 					uint64(0),
@@ -214,7 +214,7 @@ var (
 		{
 			name:     "uint64-var",
 			flagType: reflect.TypeOf(uint64(0)),
-			addFlag: func(f *PrefixedFlagSet) interface{} {
+			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target uint64
 				f.Uint64Var(
 					&target,

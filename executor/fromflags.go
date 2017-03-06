@@ -71,14 +71,14 @@ type FromFlagsDefaults struct {
 
 // NewFromFlags constructs a FromFlags with application-agnostic
 // default flag values. Most callers should use NewFromFlagsWithDefaults.
-func NewFromFlags(f *tbnflag.PrefixedFlagSet) FromFlags {
+func NewFromFlags(f tbnflag.FlagSet) FromFlags {
 	return NewFromFlagsWithDefaults(f, FromFlagsDefaults{})
 }
 
 // NewFromFlagsWithDefaults constructs a FromFlags with
 // application-provided default flag values.
 func NewFromFlagsWithDefaults(
-	f *tbnflag.PrefixedFlagSet,
+	f tbnflag.FlagSet,
 	defaults FromFlagsDefaults,
 ) FromFlags {
 	delayTypeChoice :=

@@ -17,7 +17,6 @@ limitations under the License.
 package executor
 
 import (
-	"flag"
 	"runtime"
 	"testing"
 	"time"
@@ -30,11 +29,9 @@ import (
 func TestFromFlags(t *testing.T) {
 	log := log.NewNoopLogger()
 
-	flagSet := flag.NewFlagSet("executor", flag.PanicOnError)
+	flagSet := tbnflag.NewTestFlagSet()
 
-	prefixedFlagSet := tbnflag.NewPrefixedFlagSet(flagSet, "exec", "whatever")
-
-	ff := NewFromFlags(prefixedFlagSet)
+	ff := NewFromFlags(flagSet.Scope("exec", "whatever"))
 	assert.NonNil(t, ff)
 
 	ffImpl := ff.(*fromFlags)
@@ -113,8 +110,7 @@ func TestFromFlags(t *testing.T) {
 }
 
 func TestFromFlagsWithDefaults(t *testing.T) {
-	flagSet := flag.NewFlagSet("executor", flag.PanicOnError)
-	prefixedFlagSet := tbnflag.NewPrefixedFlagSet(flagSet, "exec", "whatever")
+	prefixedFlagSet := tbnflag.NewTestFlagSet().Scope("exec", "whatever")
 	ff := NewFromFlagsWithDefaults(prefixedFlagSet, FromFlagsDefaults{})
 	ffImpl := ff.(*fromFlags)
 
@@ -127,8 +123,7 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 	assert.Equal(t, ffImpl.timeout, 0*time.Second)
 	assert.Equal(t, ffImpl.attemptTimeout, 0*time.Second)
 
-	flagSet = flag.NewFlagSet("executor", flag.PanicOnError)
-	prefixedFlagSet = tbnflag.NewPrefixedFlagSet(flagSet, "exec", "whatever")
+	prefixedFlagSet = tbnflag.NewTestFlagSet().Scope("exec", "whatever")
 	ff = NewFromFlagsWithDefaults(
 		prefixedFlagSet,
 		FromFlagsDefaults{
@@ -152,5 +147,4 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 	assert.Equal(t, ffImpl.parallelism, 5)
 	assert.Equal(t, ffImpl.timeout, 6*time.Second)
 	assert.Equal(t, ffImpl.attemptTimeout, 7*time.Millisecond)
-
 }

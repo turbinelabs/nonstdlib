@@ -23,48 +23,49 @@ import (
 	"strings"
 )
 
-// A PrefixedFlagSet extends a flag.FlagSet to allow arbitrary-depth scoping
+// prefixedFlagSet extends a flag.FlagSet to allow arbitrary-depth scoping
 // of flags, using "." as a delemiter.
-type PrefixedFlagSet struct {
+type prefixedFlagSet struct {
 	*flag.FlagSet
 
 	prefix     string
 	descriptor string
 }
 
-// NewPrefixedFlagSet produces a new PrefixedFlagSet with the given
+// newPrefixedFlagSet produces a new prefixedFlagSet with the given
 // *flag.FlagSet, prefix and descriptor. The descriptor is included
 // will be used to replace the string "{{NAME}}" in usage strings
 // used when declaring Flags.
-func NewPrefixedFlagSet(fs *flag.FlagSet, prefix, descriptor string) *PrefixedFlagSet {
+func newPrefixedFlagSet(fs *flag.FlagSet, prefix, descriptor string) *prefixedFlagSet {
 	if prefix != "" && !strings.HasSuffix(prefix, ".") {
 		prefix = prefix + "."
 	}
 
-	return &PrefixedFlagSet{
+	return &prefixedFlagSet{
 		FlagSet:    fs,
 		prefix:     prefix,
 		descriptor: descriptor,
 	}
 }
 
-func (f *PrefixedFlagSet) mkUsage(usage string) string {
+func (f *prefixedFlagSet) mkUsage(usage string) string {
 	return strings.Replace(usage, "{{NAME}}", f.descriptor, -1)
 }
 
 // Var wraps the underlying FlagSet's Var function.
-func (f *PrefixedFlagSet) Var(value flag.Value, name string, usage string) {
+func (f *prefixedFlagSet) Var(value flag.Value, name string, usage string) {
 	f.FlagSet.Var(value, f.prefix+name, f.mkUsage(usage))
 }
 
-// Scope scopes the target PrefixedFlagSet to produce a new PrefixedFlagSet,
+// Scope scopes the target prefixedFlagSet to produce a new FlagSet,
 // with the given scope an descriptor.
-func (f *PrefixedFlagSet) Scope(prefix, descriptor string) *PrefixedFlagSet {
-	return NewPrefixedFlagSet(f.FlagSet, f.prefix+prefix, descriptor)
+func (f *prefixedFlagSet) Scope(prefix, descriptor string) FlagSet {
+	// apply {{NAME}} to descriptor
+	descriptor = f.mkUsage(descriptor)
+
+	return newPrefixedFlagSet(f.FlagSet, f.prefix+prefix, descriptor)
 }
 
-// Descriptor returns the descriptor string, which is used to replace the
-// string "{{NAME}}" in usage strings used when declaring Flags.
-func (f *PrefixedFlagSet) Descriptor() string {
-	return f.descriptor
+func (f *prefixedFlagSet) Unwrap() *flag.FlagSet {
+	return f.FlagSet
 }

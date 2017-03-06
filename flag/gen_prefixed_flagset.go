@@ -24,81 +24,81 @@ import (
 )
 
 // BoolVar wraps the underlying FlagSet's BoolVar function.
-func (f *PrefixedFlagSet) BoolVar(p *bool, name string, value bool, usage string) {
+func (f *prefixedFlagSet) BoolVar(p *bool, name string, value bool, usage string) {
 	f.FlagSet.BoolVar(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Bool wraps the underlying FlagSet's Bool function.
-func (f *PrefixedFlagSet) Bool(name string, value bool, usage string) *bool {
+func (f *prefixedFlagSet) Bool(name string, value bool, usage string) *bool {
 	return f.FlagSet.Bool(f.prefix+name, value, f.mkUsage(usage))
 }
 
 // DurationVar wraps the underlying FlagSet's DurationVar function.
-func (f *PrefixedFlagSet) DurationVar(p *time.Duration, name string, value time.Duration, usage string) {
+func (f *prefixedFlagSet) DurationVar(p *time.Duration, name string, value time.Duration, usage string) {
 	f.FlagSet.DurationVar(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Duration wraps the underlying FlagSet's Duration function.
-func (f *PrefixedFlagSet) Duration(name string, value time.Duration, usage string) *time.Duration {
+func (f *prefixedFlagSet) Duration(name string, value time.Duration, usage string) *time.Duration {
 	return f.FlagSet.Duration(f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Float64Var wraps the underlying FlagSet's Float64Var function.
-func (f *PrefixedFlagSet) Float64Var(p *float64, name string, value float64, usage string) {
+func (f *prefixedFlagSet) Float64Var(p *float64, name string, value float64, usage string) {
 	f.FlagSet.Float64Var(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Float64 wraps the underlying FlagSet's Float64 function.
-func (f *PrefixedFlagSet) Float64(name string, value float64, usage string) *float64 {
+func (f *prefixedFlagSet) Float64(name string, value float64, usage string) *float64 {
 	return f.FlagSet.Float64(f.prefix+name, value, f.mkUsage(usage))
 }
 
 // IntVar wraps the underlying FlagSet's IntVar function.
-func (f *PrefixedFlagSet) IntVar(p *int, name string, value int, usage string) {
+func (f *prefixedFlagSet) IntVar(p *int, name string, value int, usage string) {
 	f.FlagSet.IntVar(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Int wraps the underlying FlagSet's Int function.
-func (f *PrefixedFlagSet) Int(name string, value int, usage string) *int {
+func (f *prefixedFlagSet) Int(name string, value int, usage string) *int {
 	return f.FlagSet.Int(f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Int64Var wraps the underlying FlagSet's Int64Var function.
-func (f *PrefixedFlagSet) Int64Var(p *int64, name string, value int64, usage string) {
+func (f *prefixedFlagSet) Int64Var(p *int64, name string, value int64, usage string) {
 	f.FlagSet.Int64Var(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Int64 wraps the underlying FlagSet's Int64 function.
-func (f *PrefixedFlagSet) Int64(name string, value int64, usage string) *int64 {
+func (f *prefixedFlagSet) Int64(name string, value int64, usage string) *int64 {
 	return f.FlagSet.Int64(f.prefix+name, value, f.mkUsage(usage))
 }
 
 // StringVar wraps the underlying FlagSet's StringVar function.
-func (f *PrefixedFlagSet) StringVar(p *string, name string, value string, usage string) {
+func (f *prefixedFlagSet) StringVar(p *string, name string, value string, usage string) {
 	f.FlagSet.StringVar(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // String wraps the underlying FlagSet's String function.
-func (f *PrefixedFlagSet) String(name string, value string, usage string) *string {
+func (f *prefixedFlagSet) String(name string, value string, usage string) *string {
 	return f.FlagSet.String(f.prefix+name, value, f.mkUsage(usage))
 }
 
 // UintVar wraps the underlying FlagSet's UintVar function.
-func (f *PrefixedFlagSet) UintVar(p *uint, name string, value uint, usage string) {
+func (f *prefixedFlagSet) UintVar(p *uint, name string, value uint, usage string) {
 	f.FlagSet.UintVar(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Uint wraps the underlying FlagSet's Uint function.
-func (f *PrefixedFlagSet) Uint(name string, value uint, usage string) *uint {
+func (f *prefixedFlagSet) Uint(name string, value uint, usage string) *uint {
 	return f.FlagSet.Uint(f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Uint64Var wraps the underlying FlagSet's Uint64Var function.
-func (f *PrefixedFlagSet) Uint64Var(p *uint64, name string, value uint64, usage string) {
+func (f *prefixedFlagSet) Uint64Var(p *uint64, name string, value uint64, usage string) {
 	f.FlagSet.Uint64Var(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
 // Uint64 wraps the underlying FlagSet's Uint64 function.
-func (f *PrefixedFlagSet) Uint64(name string, value uint64, usage string) *uint64 {
+func (f *prefixedFlagSet) Uint64(name string, value uint64, usage string) *uint64 {
 	return f.FlagSet.Uint64(f.prefix+name, value, f.mkUsage(usage))
 }
