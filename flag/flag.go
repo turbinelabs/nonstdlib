@@ -25,6 +25,18 @@ import (
 
 const requiredPrefix = "[REQUIRED] "
 
+// ConstrainedValue is a flag.Value with constraints on it assigned
+// value. Typically the constraints limit a flag to a given set of
+// strings.
+type ConstrainedValue interface {
+	flag.Value
+
+	// ValidValuesDescription provides a description of the value
+	// values for this ContrainedValue suiteable for use in flag
+	// usage text.
+	ValidValuesDescription() string
+}
+
 // Required prefixes its argument with "[REQUIRED] " which, in addition from
 // documenting for the users of the command.Cmd on which the flag is declared
 // that the argument is required, will also cause it to be checked when the

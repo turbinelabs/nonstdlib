@@ -149,3 +149,17 @@ func TestStringsFlagSetIntegration(t *testing.T) {
 	assert.ArrayEqual(t, strings2.Strings, []string{"d", "e", "f"})
 	assert.ArrayEqual(t, strings3.Strings, []string{"g", "h", "i"})
 }
+
+func TestStringsValidValuesDescription(t *testing.T) {
+	c := &Strings{AllowedValues: []string{"a", "b", "c"}}
+	assert.Equal(t, c.ValidValuesDescription(), `"a", "b", or "c"`)
+
+	c = &Strings{AllowedValues: []string{"a", "b"}}
+	assert.Equal(t, c.ValidValuesDescription(), `"a" or "b"`)
+
+	c = &Strings{AllowedValues: []string{"a"}}
+	assert.Equal(t, c.ValidValuesDescription(), `"a"`)
+
+	c = &Strings{}
+	assert.Equal(t, c.ValidValuesDescription(), "")
+}

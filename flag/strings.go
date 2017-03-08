@@ -47,7 +47,7 @@ type Strings struct {
 }
 
 var _ flag.Getter = &Strings{}
-var _ flag.Value = &Strings{}
+var _ ConstrainedValue = &Strings{}
 
 // NewStrings produces a Strings with the default delimiter (",").
 func NewStrings() Strings {
@@ -58,6 +58,13 @@ func NewStrings() Strings {
 // values and the default delimiter (",").
 func NewStringsWithConstraint(allowedValues ...string) Strings {
 	return Strings{AllowedValues: allowedValues, Delimiter: ","}
+}
+
+// ValidValuesDescription returns a string describing the allowed
+// values for this Strings. For example: "a", "b", or "c". If this
+// Strings is unconstrained, it returns an empty string.
+func (ssv *Strings) ValidValuesDescription() string {
+	return allowedValuesToDescription(ssv.AllowedValues)
 }
 
 // Retrieves the values set on Strings joined by the delimiter.

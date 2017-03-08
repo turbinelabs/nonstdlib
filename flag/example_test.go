@@ -53,7 +53,7 @@ func ExampleNewStringsWithConstraint() {
 	flagset.Var(
 		&strings,
 		"x",
-		"Flag help.",
+		"Flag help. Allowed values: "+strings.ValidValuesDescription(),
 	)
 
 	flagset.Parse([]string{"-x=choice1,possibility3"})
@@ -74,7 +74,7 @@ func ExampleStrings_withDelimiter() {
 	flagset.Var(
 		&strings,
 		"x",
-		"Flag help.",
+		"Flag help. Allowed values: "+strings.ValidValuesDescription(),
 	)
 
 	flagset.Parse([]string{"-x=one;two"})
@@ -95,7 +95,7 @@ func ExampleNewChoice() {
 	flagset.Var(
 		&choice,
 		"x",
-		"Flag help.",
+		"Flag help. Allowed values: "+choice.ValidValuesDescription(),
 	)
 
 	flagset.Parse([]string{"-x=c"})

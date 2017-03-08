@@ -19,6 +19,7 @@ package flag
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/turbinelabs/nonstdlib/arrays/indexof"
@@ -35,6 +36,7 @@ type Choice struct {
 }
 
 var _ flag.Getter = &Choice{}
+var _ ConstrainedValue = &Choice{}
 
 // NewChoice produces a Choice with a set of allowed values.
 func NewChoice(allowedValues ...string) Choice {
@@ -46,6 +48,31 @@ func NewChoice(allowedValues ...string) Choice {
 func (cv Choice) WithDefault(value string) Choice {
 	cv.Set(value)
 	return cv
+}
+
+func allowedValuesToDescription(allowedValues []string) string {
+	quoted := make([]string, len(allowedValues))
+	for i, v := range allowedValues {
+		quoted[i] = strconv.Quote(v)
+	}
+
+	switch n := len(quoted); n {
+	case 0:
+		return ""
+	case 1:
+		return quoted[0]
+	case 2:
+		return strings.Join(quoted, " or ")
+	default:
+		commaSep := strings.Join(quoted[0:n-1], ", ")
+		return commaSep + ", or " + quoted[n-1]
+	}
+}
+
+// ValidValuesDescription returns a string describing the allowed
+// values for this Choice. For example: "a", "b", or "c".
+func (cv *Choice) ValidValuesDescription() string {
+	return allowedValuesToDescription(cv.AllowedValues)
 }
 
 // String returns the current value of the Choice.

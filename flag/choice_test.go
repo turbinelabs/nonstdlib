@@ -52,3 +52,25 @@ func TestChoiceSet(t *testing.T) {
 	assert.Nil(t, c.Choice)
 	assert.ErrorContains(t, err, "invalid flag value: nope, must be one of a, b, c")
 }
+
+func TestChoiceWithDefault(t *testing.T) {
+	c := Choice{AllowedValues: []string{"a", "b", "c"}}
+	assert.Equal(t, c.String(), "")
+
+	c = c.WithDefault("b")
+	assert.Equal(t, c.String(), "b")
+}
+
+func TestChoiceValidValuesDescription(t *testing.T) {
+	c := &Choice{AllowedValues: []string{"a", "b", "c"}}
+	assert.Equal(t, c.ValidValuesDescription(), `"a", "b", or "c"`)
+
+	c = &Choice{AllowedValues: []string{"a", "b"}}
+	assert.Equal(t, c.ValidValuesDescription(), `"a" or "b"`)
+
+	c = &Choice{AllowedValues: []string{"a"}}
+	assert.Equal(t, c.ValidValuesDescription(), `"a"`)
+
+	c = &Choice{}
+	assert.Equal(t, c.ValidValuesDescription(), "")
+}
