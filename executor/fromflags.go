@@ -19,7 +19,6 @@ package executor
 //go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
 
 import (
-	"fmt"
 	"log"
 	"runtime"
 	"time"
@@ -92,7 +91,7 @@ func NewFromFlagsWithDefaults(
 	f.Var(
 		&ff.delayType,
 		"delay-type",
-		fmt.Sprintf("retry delay type (%s or %s)", ExponentialDelayType, ConstantDelayType),
+		"Specifies the retry delay type.",
 	)
 
 	f.DurationVar(
