@@ -37,34 +37,83 @@ import (
 )
 
 const (
-	errorLevel = "error"
-	debugLevel = "debug"
 	noneLevel  = "none"
+	errorLevel = "error"
+	infoLevel  = "info"
+	debugLevel = "debug"
+
+	defaultLevel = infoLevel
+)
+
+const (
+	noneOrdinal int = iota
+	errorOrdinal
+	infoOrdinal
+	debugOrdinal
+
+	defaultOrdinal = infoOrdinal
 )
 
 var (
-	errorLogger    = log.New(os.Stderr, "[error] ", log.LstdFlags)
-	debugLogger    = log.New(os.Stderr, "[debug] ", log.LstdFlags)
-	nullLogger     = log.New(ioutil.Discard, "", 0)
-	logLevelChoice = tbnflag.NewChoice(debugLevel, errorLevel, noneLevel).WithDefault(errorLevel)
+	errorLogger = log.New(os.Stderr, "[error] ", log.LstdFlags)
+	infoLogger  = log.New(os.Stderr, "[info] ", log.LstdFlags)
+	debugLogger = log.New(os.Stderr, "[debug] ", log.LstdFlags)
+	nullLogger  = log.New(ioutil.Discard, "", 0)
+
+	logLevelChoice = tbnflag.NewChoice(
+		debugLevel,
+		infoLevel,
+		errorLevel,
+		noneLevel,
+	).WithDefault(defaultLevel)
+
+	logLevelOrder = map[string]int{
+		noneLevel:  noneOrdinal,
+		errorLevel: errorOrdinal,
+		infoLevel:  infoOrdinal,
+		debugLevel: debugOrdinal,
+	}
 )
 
+func logLevel() int {
+	choice := logLevelChoice.Choice
+	if choice == nil {
+		return defaultOrdinal
+	}
+
+	if level, ok := logLevelOrder[*choice]; ok {
+		return level
+	}
+
+	return defaultOrdinal
+}
+
 // Error returns a Logger to Stderr prefixed with "[error]" if the log level is
-// error or debug, otherwise it returns a no-op Logger.
+// error, info, or debug, otherwise it returns a no-op Logger.
 func Error() *log.Logger {
-	if *logLevelChoice.Choice == noneLevel {
+	if logLevel() < errorOrdinal {
 		return nullLogger
 	}
 	return errorLogger
 }
 
+// Info returns a Logger to Stderr prefixed with "[info]" if the log
+// level is info or error, otherwise it returns a no-op Logger.
+func Info() *log.Logger {
+	if logLevel() < infoOrdinal {
+		return nullLogger
+	}
+	return infoLogger
+}
+
 // Debug returns a Logger to Stderr prefixed with "[debug]" if the log level is
 // debug, otherwise it returns a no-op Logger.
 func Debug() *log.Logger {
-	if *logLevelChoice.Choice == debugLevel {
-		return debugLogger
+	if logLevel() < debugOrdinal {
+		return nullLogger
 	}
-	return nullLogger
+
+	return debugLogger
 }
 
 // Init binds the log level to a flag in the given FlagSet.
@@ -72,6 +121,6 @@ func Init(fs tbnflag.FlagSet) {
 	fs.Var(
 		&logLevelChoice,
 		"console.level",
-		"if none, log nothing. if error, log only errors. if debug, include debug logs.",
+		"Selects the log `level` for console logs messages.",
 	)
 }
