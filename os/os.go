@@ -37,6 +37,7 @@ type OS interface {
 	Args() []string
 	Getenv(key string) string
 	LookupEnv(key string) (value string, found bool)
+	ExpandEnv(s string) string
 	Exit(code int)
 	Stdin() io.Reader
 	Stdout() io.Writer
@@ -69,6 +70,10 @@ func (x goOS) Getenv(key string) string {
 
 func (x goOS) LookupEnv(key string) (string, bool) {
 	return os.LookupEnv(key)
+}
+
+func (x goOS) ExpandEnv(s string) string {
+	return os.ExpandEnv(s)
 }
 
 func (x goOS) Exit(code int) {

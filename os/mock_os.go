@@ -61,6 +61,16 @@ func (_mr *_MockOSRecorder) LookupEnv(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "LookupEnv", arg0)
 }
 
+func (_m *MockOS) ExpandEnv(s string) string {
+	ret := _m.ctrl.Call(_m, "ExpandEnv", s)
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+func (_mr *_MockOSRecorder) ExpandEnv(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "ExpandEnv", arg0)
+}
+
 func (_m *MockOS) Exit(code int) {
 	_m.ctrl.Call(_m, "Exit", code)
 }
