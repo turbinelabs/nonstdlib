@@ -69,9 +69,15 @@ func Run(cmd string, args ...string) (string, string, error) {
 // RunCmdInTerm executes a command redirecting stderr, stdout, and
 // stdin from the active TERM.
 func RunCmdInTerm(cmd *exec.Cmd) error {
-	cmd.Stdout = os.Stdout
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
+	if cmd.Stdout == nil {
+		cmd.Stdout = os.Stdout
+	}
+	if cmd.Stdin == nil {
+		cmd.Stdin = os.Stdin
+	}
+	if cmd.Stderr == nil {
+		cmd.Stderr = os.Stderr
+	}
 	return ProcessErr(cmd.Run())
 }
 

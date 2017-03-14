@@ -29,6 +29,7 @@ limitations under the License.
 package console
 
 import (
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -55,9 +56,11 @@ const (
 )
 
 var (
-	errorLogger = log.New(os.Stderr, "[error] ", log.LstdFlags)
-	infoLogger  = log.New(os.Stderr, "[info] ", log.LstdFlags)
-	debugLogger = log.New(os.Stderr, "[debug] ", log.LstdFlags)
+	logFlags = log.LstdFlags | log.LUTC
+
+	errorLogger = log.New(os.Stderr, "[error] ", logFlags)
+	infoLogger  = log.New(os.Stderr, "[info] ", logFlags)
+	debugLogger = log.New(os.Stderr, "[debug] ", logFlags)
 	nullLogger  = log.New(ioutil.Discard, "", 0)
 
 	logLevelChoice = tbnflag.NewChoice(
@@ -123,4 +126,18 @@ func Init(fs tbnflag.FlagSet) {
 		"console.level",
 		"Selects the log `level` for console logs messages.",
 	)
+}
+
+// ToWriter wraps a *log.Logger and provides an implementation of io.Writer
+func ToWriter(l *log.Logger) io.Writer {
+	return loggerToWriter{l}
+}
+
+type loggerToWriter struct {
+	*log.Logger
+}
+
+func (l loggerToWriter) Write(bs []byte) (int, error) {
+	l.Printf("%s", bs)
+	return len(bs), nil
 }
