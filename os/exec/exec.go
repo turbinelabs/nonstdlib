@@ -22,6 +22,8 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+
+	"github.com/turbinelabs/nonstdlib/log/console"
 )
 
 // ProcessErr converts the error value from an exec.Command execution into nil
@@ -41,8 +43,8 @@ func ProcessErr(e error) error {
 	return nil
 }
 
-// RunCmd executes a command then returns (stdout, stderr, error); if
-// the process returns success (exit code 0) error is nil.
+// RunCmd executes a command then returns (stdout, stderr, error); if the
+// process returns success (exit code 0) error is nil.
 //
 // In all cases the stdout and stderr from the executed command is returned.
 func RunCmd(cmd *exec.Cmd) (string, string, error) {
@@ -85,4 +87,24 @@ func RunCmdInTerm(cmd *exec.Cmd) error {
 // redirecting stderr, stdout, and stdin from the active TERM.
 func RunInTerm(cmd string, args ...string) error {
 	return RunCmdInTerm(exec.Command(cmd, args...))
+}
+
+// RunCmdInConsole runs the given exec.Cmd, printing Stdout and Stderr to the
+// console info log
+func RunCmdInConsole(cmd *exec.Cmd) error {
+	w := console.ToWriteCloser(console.Info())
+	defer func() {
+		if err := w.Close(); err != nil {
+			console.Error().Printf("RunCmdInConsole: could not close writer: %s", err)
+		}
+	}()
+	cmd.Stdout = w
+	cmd.Stderr = w
+	return RunCmdInTerm(cmd)
+}
+
+// RunInConsole runs the given cmd string with optional arguments printing
+// Stdout and Stderr to the console info log
+func RunInConsole(cmdStr string, args ...string) error {
+	return RunCmdInConsole(exec.Command(cmdStr, args...))
 }

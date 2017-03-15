@@ -29,6 +29,7 @@ limitations under the License.
 package console
 
 import (
+	"bufio"
 	"io"
 	"io/ioutil"
 	"log"
@@ -128,16 +129,34 @@ func Init(fs tbnflag.FlagSet) {
 	)
 }
 
-// ToWriter wraps a *log.Logger and provides an implementation of io.Writer
-func ToWriter(l *log.Logger) io.Writer {
-	return loggerToWriter{l}
+// ToWriteCloser wraps a *log.Logger and provides an implementation of
+// io.WriteCloser
+func ToWriteCloser(l *log.Logger) io.WriteCloser {
+	reader, writer := io.Pipe()
+	buffered := bufio.NewReader(reader)
+	done := make(chan bool)
+	go func() {
+		for {
+			line, err := buffered.ReadString('\n')
+			// eg EOF
+			if err != nil {
+				done <- true
+				return
+			}
+			l.Output(1, line)
+		}
+	}()
+	return &waitWriteCloser{writer, done}
 }
 
-type loggerToWriter struct {
-	*log.Logger
+type waitWriteCloser struct {
+	io.WriteCloser
+	done chan bool
 }
 
-func (l loggerToWriter) Write(bs []byte) (int, error) {
-	l.Printf("%s", bs)
-	return len(bs), nil
+func (c *waitWriteCloser) Close() error {
+	err := c.WriteCloser.Close()
+	// wait until the log writing function has signaled done before returning
+	<-c.done
+	return err
 }
