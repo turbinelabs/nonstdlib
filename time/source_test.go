@@ -78,3 +78,35 @@ func TestWithCurrentTimeFrozen(t *testing.T) {
 	assert.True(t, before.Before(frozenTime) || before.Equal(frozenTime))
 	assert.True(t, after.After(frozenTime) || after.Equal(frozenTime))
 }
+
+func TestIncrementingControlledSource(t *testing.T) {
+	before := time.Now()
+	delta := 5 * time.Second
+
+	s := NewIncrementingControlledSource(before, delta)
+	assert.Equal(t, before, s.Now())
+	assert.Equal(t, before.Add(delta), s.Now())
+}
+
+func TestIncrementingControlledSourceAdvance(t *testing.T) {
+	before := time.Now()
+	delta := 5 * time.Second
+
+	s := NewIncrementingControlledSource(before, delta)
+	assert.Equal(t, before, s.Now())
+	s.Advance(time.Second)
+
+	assert.Equal(t, before.Add(delta+time.Second), s.Now())
+}
+
+func TestIncrementingControlledSourceSet(t *testing.T) {
+	before := time.Now()
+	delta := 5 * time.Second
+
+	s := NewIncrementingControlledSource(before, delta)
+	assert.Equal(t, before, s.Now())
+	s.Set(before.Add(-1 * time.Hour))
+
+	assert.Equal(t, before.Add(-1*time.Hour), s.Now())
+	assert.Equal(t, before.Add(-1*time.Hour).Add(delta), s.Now())
+}

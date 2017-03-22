@@ -80,3 +80,20 @@ func (s *controlledTimeSource) Set(t time.Time) {
 func (s *controlledTimeSource) Advance(delta time.Duration) {
 	s.now = s.now.Add(delta)
 }
+
+type incrementingTimeSource struct {
+	*controlledTimeSource
+	inc time.Duration
+}
+
+func (i *incrementingTimeSource) Now() time.Time {
+	t := i.now
+	i.now = i.now.Add(i.inc)
+	return t
+}
+
+// NewIncrementingControlledSource returns a new ControlledSource that
+// increments the controlled time by some delta every time Now() is called.
+func NewIncrementingControlledSource(at time.Time, delta time.Duration) ControlledSource {
+	return &incrementingTimeSource{&controlledTimeSource{at}, delta}
+}
