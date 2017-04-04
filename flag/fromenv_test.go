@@ -111,3 +111,22 @@ func TestFillFromEnvOneSet(t *testing.T) {
 	assert.Equal(t, *barFlag, "")
 	assert.DeepEqual(t, fe.Filled(), map[string]string{})
 }
+
+func TestFillFromEnvOneSensitive(t *testing.T) {
+	ctrl := gomock.NewController(assert.Tracing(t))
+	defer ctrl.Finish()
+
+	mockOS := tbnos.NewMockOS(ctrl)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_BAR").Return("", false)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_QUX").Return("it is a duck", true)
+
+	fs, _, _, _ := testFlags()
+	fs.Parse([]string{"--foo-baz=blargo"})
+
+	fe := NewFromEnv(fs, "foo", "bar").(fromEnv)
+	fe.os = mockOS
+
+	fe.Fill()
+
+	assert.DeepEqual(t, fe.Filled(), map[string]string{"FOO_BAR_QUX": "<redacted>"})
+}

@@ -23,6 +23,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/turbinelabs/nonstdlib/flag/usage"
 	tbnos "github.com/turbinelabs/nonstdlib/os"
 )
 
@@ -67,7 +68,8 @@ type FromEnv interface {
 	Fill()
 
 	// Filled returns a map of the environment keys and values for flags currently
-	// filled from the environment.
+	// filled from the environment. Values for flags marked sensitive will be
+	// redacted
 	Filled() map[string]string
 
 	// AllFlags returns a slice containing all Flags in the underlying Flagset
@@ -96,7 +98,11 @@ func (fe fromEnv) Fill() {
 			val, found := fe.os.LookupEnv(key)
 			if found {
 				fe.fs.Set(f.Name, val)
-				fe.filledFromEnv[key] = val
+				if usage.IsSensitive(f) {
+					fe.filledFromEnv[key] = "<redacted>"
+				} else {
+					fe.filledFromEnv[key] = val
+				}
 			}
 		}
 	})

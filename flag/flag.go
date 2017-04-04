@@ -20,7 +20,8 @@ package flag
 
 import (
 	"flag"
-	"strings"
+
+	"github.com/turbinelabs/nonstdlib/flag/usage"
 )
 
 const requiredPrefix = "[REQUIRED] "
@@ -37,48 +38,22 @@ type ConstrainedValue interface {
 	ValidValuesDescription() string
 }
 
-// Required prefixes its argument with "[REQUIRED] " which, in addition from
-// documenting for the users of the command.Cmd on which the flag is declared
-// that the argument is required, will also cause it to be checked when the
-// Cmd's Run method is invoked.
-func Required(usage string) string {
-	return requiredPrefix + usage
+// DEPRECATED
+//
+// Required produces a usage string for a Flag indiciating that the Flag is
+// required. It is deprecated in favor of usage.Required(), and will be removed
+// sometime in the future.
+func Required(u string) string {
+	return usage.Required(u)
 }
 
-// IsRequired checks the usage string of the given Flag to see if it is
-// prefixed with "[REQUIRED] ".
+// DEPRECATED
+//
+// IsRequired checks the usage string of the given Flag to see if it is marked
+// as required. It is deprecated in favor of usage.IsRequired(), and will be
+// removed sometime in the future.
 func IsRequired(f *flag.Flag) bool {
-	return strings.HasPrefix(f.Usage, requiredPrefix)
-}
-
-// AllRequired produces a slice of the names of all flags for which the Usage
-// string is prefxied with "[REQUIRED] ".
-func AllRequired(fs *flag.FlagSet) []string {
-	result := []string{}
-	fs.VisitAll(func(f *flag.Flag) {
-		if IsRequired(f) {
-			result = append(result, f.Name)
-		}
-	})
-	return result
-}
-
-// MissingRequired produces a slice of the names of all flags for which the
-// Usage string is prefixed with "[REQUIRED] " but no value has been set.
-func MissingRequired(fs *flag.FlagSet) []string {
-	seen := map[string]bool{}
-	fs.Visit(func(f *flag.Flag) {
-		seen[f.Name] = true
-	})
-
-	result := []string{}
-	fs.VisitAll(func(f *flag.Flag) {
-		if !seen[f.Name] && IsRequired(f) {
-			result = append(result, f.Name)
-		}
-	})
-
-	return result
+	return usage.IsRequired(f)
 }
 
 // Enumerate returns a slice containing all Flags in the Flagset

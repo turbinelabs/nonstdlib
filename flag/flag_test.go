@@ -20,38 +20,16 @@ import (
 	"flag"
 	"testing"
 
+	"github.com/turbinelabs/nonstdlib/flag/usage"
 	"github.com/turbinelabs/test/assert"
 )
 
 func testFlags() (*flag.FlagSet, *string, *string, *string) {
 	var fs flag.FlagSet
 	fooFlag := fs.String("foo-baz", "", "do the foo")
-	barFlag := fs.String("bar", "", Required("harty har to the bar"))
-	quxFlag := fs.String("qux", "qux-default", "if it qux like a duck...")
+	barFlag := fs.String("bar", "", usage.Required("harty har to the bar"))
+	quxFlag := fs.String("qux", "qux-default", usage.Sensitive("if it qux like a duck..."))
 	return &fs, fooFlag, barFlag, quxFlag
-}
-
-func TestRequired(t *testing.T) {
-	assert.Equal(t, Required("foo"), "[REQUIRED] foo")
-}
-
-func TestIsRequired(t *testing.T) {
-	assert.True(t, IsRequired(&flag.Flag{Usage: Required("foo")}))
-	assert.False(t, IsRequired(&flag.Flag{}))
-}
-
-func TestMissingRequired(t *testing.T) {
-	fs, _, _, _ := testFlags()
-	assert.DeepEqual(t, MissingRequired(fs), []string{"bar"})
-	fs.Parse([]string{"--bar=baz"})
-	assert.DeepEqual(t, MissingRequired(fs), []string{})
-}
-
-func TestAllRequired(t *testing.T) {
-	fs, _, _, _ := testFlags()
-	assert.DeepEqual(t, AllRequired(fs), []string{"bar"})
-	fs.Parse([]string{"--bar=baz"})
-	assert.DeepEqual(t, AllRequired(fs), []string{"bar"})
 }
 
 func TestEnumerateNil(t *testing.T) {
