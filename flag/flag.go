@@ -20,8 +20,6 @@ package flag
 
 import (
 	"flag"
-
-	"github.com/turbinelabs/nonstdlib/flag/usage"
 )
 
 const requiredPrefix = "[REQUIRED] "
@@ -36,24 +34,6 @@ type ConstrainedValue interface {
 	// values for this ContrainedValue suiteable for use in flag
 	// usage text.
 	ValidValuesDescription() string
-}
-
-// DEPRECATED
-//
-// Required produces a usage string for a Flag indiciating that the Flag is
-// required. It is deprecated in favor of usage.Required(), and will be removed
-// sometime in the future.
-func Required(u string) string {
-	return usage.Required(u)
-}
-
-// DEPRECATED
-//
-// IsRequired checks the usage string of the given Flag to see if it is marked
-// as required. It is deprecated in favor of usage.IsRequired(), and will be
-// removed sometime in the future.
-func IsRequired(f *flag.Flag) bool {
-	return usage.IsRequired(f)
 }
 
 // Enumerate returns a slice containing all Flags in the Flagset
