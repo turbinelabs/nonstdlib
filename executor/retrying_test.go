@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	tbntime "github.com/turbinelabs/nonstdlib/time"
 	"github.com/turbinelabs/test/assert"
 	"github.com/turbinelabs/test/log"
 )
@@ -44,6 +45,7 @@ func TestRetryingExecHeapInterface(t *testing.T) {
 		q:            make([]*retry, 0, 10),
 		delay:        func(_ int) time.Duration { return 0 * time.Second },
 		maxAttempts:  2,
+		time:         tbntime.NewSource(),
 	}
 	defer close(q.deadlineChan)
 
