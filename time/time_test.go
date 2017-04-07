@@ -55,6 +55,12 @@ func TestTimeParseBad(t *testing.T) {
 	assert.NonNil(t, err)
 }
 
+func TestTimeParseEmptyString(t *testing.T) {
+	tm, err := Parse("")
+	assert.Nil(t, tm)
+	assert.Nil(t, err)
+}
+
 func TestTimeParseNoTZ(t *testing.T) {
 	ts := "2016-01-01 11:30:45.850"
 	tm, err := Parse(ts)

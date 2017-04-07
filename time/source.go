@@ -17,6 +17,7 @@ limitations under the License.
 package time
 
 import (
+	"context"
 	"time"
 )
 
@@ -24,20 +25,28 @@ var (
 	defaultTimeSourceInstance = &defaultTimeSource{}
 )
 
-// Source is a source of time.Time values.
+// Source is a source of time.Time values and Timer instances.
 type Source interface {
 	// Returns the current time, as with time.Time.Now().
 	Now() time.Time
-}
 
-// ControlledSource is a source of time.Time values that returns a
-// fixed time unless modified with the Set or Advance
-// methods. ControlledSource should be used for testing only.
-type ControlledSource interface {
-	Source
+	// NewTimer creates a new Timer that will send the current
+	// time on its channel after the given duration.
+	NewTimer(time.Duration) Timer
 
-	Set(time.Time)
-	Advance(time.Duration)
+	// NewContextWithDeadline creates a new context.Context and
+	// associated context.CancelFunc with the given deadline.
+	NewContextWithDeadline(
+		parent context.Context,
+		deadline time.Time,
+	) (context.Context, context.CancelFunc)
+
+	// NewContextWithTimeout creates a new context.Context and
+	// associated context.CancelFunc with the given timeout.
+	NewContextWithTimeout(
+		parent context.Context,
+		timeout time.Duration,
+	) (context.Context, context.CancelFunc)
 }
 
 // NewSource creates a new Source for normal use. The Source's Now
@@ -46,54 +55,26 @@ func NewSource() Source {
 	return defaultTimeSourceInstance
 }
 
-// WithTimeAt creates a new ControlledSource with the given time and
-// passes it to the given function for testing.
-func WithTimeAt(t time.Time, f func(ControlledSource)) {
-	s := &controlledTimeSource{now: t}
-	f(s)
-}
-
-// WithCurrentTimeFrozen Creates a new ControlledSource with the
-// current time and passes it to the given function for testing.
-func WithCurrentTimeFrozen(f func(ControlledSource)) {
-	WithTimeAt(time.Now(), f)
-}
-
 type defaultTimeSource struct{}
 
 func (s *defaultTimeSource) Now() time.Time {
 	return time.Now()
 }
 
-type controlledTimeSource struct {
-	now time.Time
+func (s *defaultTimeSource) NewTimer(d time.Duration) Timer {
+	return NewTimer(d)
 }
 
-func (s *controlledTimeSource) Now() time.Time {
-	return s.now
+func (s *defaultTimeSource) NewContextWithDeadline(
+	parent context.Context,
+	deadline time.Time,
+) (context.Context, context.CancelFunc) {
+	return context.WithDeadline(parent, deadline)
 }
 
-func (s *controlledTimeSource) Set(t time.Time) {
-	s.now = t
-}
-
-func (s *controlledTimeSource) Advance(delta time.Duration) {
-	s.now = s.now.Add(delta)
-}
-
-type incrementingTimeSource struct {
-	*controlledTimeSource
-	inc time.Duration
-}
-
-func (i *incrementingTimeSource) Now() time.Time {
-	t := i.now
-	i.now = i.now.Add(i.inc)
-	return t
-}
-
-// NewIncrementingControlledSource returns a new ControlledSource that
-// increments the controlled time by some delta every time Now() is called.
-func NewIncrementingControlledSource(at time.Time, delta time.Duration) ControlledSource {
-	return &incrementingTimeSource{&controlledTimeSource{at}, delta}
+func (s *defaultTimeSource) NewContextWithTimeout(
+	parent context.Context,
+	timeout time.Duration,
+) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(parent, timeout)
 }

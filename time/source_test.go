@@ -17,6 +17,7 @@ limitations under the License.
 package time
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -34,79 +35,18 @@ func TestDefaultSource(t *testing.T) {
 		assert.True(t, before.Before(now) || before.Equal(now))
 		assert.True(t, after.After(now) || after.Equal(now))
 	}
-}
 
-func TestControlledSource(t *testing.T) {
-	original := time.Now()
-	source := &controlledTimeSource{now: original}
+	delay := 1 * time.Millisecond
 
-	assert.DeepEqual(t, source.Now(), original)
-	assert.DeepEqual(t, source.Now(), original)
+	timer := source.NewTimer(delay)
+	defer timer.Stop()
+	<-timer.C()
 
-	source.Advance(5 * time.Minute)
-	assert.DeepEqual(t, source.Now(), original.Add(5*time.Minute))
+	ctxt1, cancel1 := source.NewContextWithDeadline(context.TODO(), source.Now().Add(delay))
+	defer cancel1()
+	<-ctxt1.Done()
 
-	source.Set(original)
-	assert.DeepEqual(t, source.Now(), original)
-}
-
-func TestWithTimeAt(t *testing.T) {
-	original := time.Now()
-
-	called := false
-	WithTimeAt(original, func(ts ControlledSource) {
-		called = true
-
-		assert.Equal(t, ts.Now(), original)
-	})
-
-	assert.True(t, called)
-}
-
-func TestWithCurrentTimeFrozen(t *testing.T) {
-	before := time.Now()
-
-	called := false
-	frozenTime := time.Time{}
-	WithCurrentTimeFrozen(func(ts ControlledSource) {
-		called = true
-		frozenTime = ts.Now()
-	})
-	after := time.Now()
-
-	assert.True(t, called)
-	assert.True(t, before.Before(frozenTime) || before.Equal(frozenTime))
-	assert.True(t, after.After(frozenTime) || after.Equal(frozenTime))
-}
-
-func TestIncrementingControlledSource(t *testing.T) {
-	before := time.Now()
-	delta := 5 * time.Second
-
-	s := NewIncrementingControlledSource(before, delta)
-	assert.Equal(t, before, s.Now())
-	assert.Equal(t, before.Add(delta), s.Now())
-}
-
-func TestIncrementingControlledSourceAdvance(t *testing.T) {
-	before := time.Now()
-	delta := 5 * time.Second
-
-	s := NewIncrementingControlledSource(before, delta)
-	assert.Equal(t, before, s.Now())
-	s.Advance(time.Second)
-
-	assert.Equal(t, before.Add(delta+time.Second), s.Now())
-}
-
-func TestIncrementingControlledSourceSet(t *testing.T) {
-	before := time.Now()
-	delta := 5 * time.Second
-
-	s := NewIncrementingControlledSource(before, delta)
-	assert.Equal(t, before, s.Now())
-	s.Set(before.Add(-1 * time.Hour))
-
-	assert.Equal(t, before.Add(-1*time.Hour), s.Now())
-	assert.Equal(t, before.Add(-1*time.Hour).Add(delta), s.Now())
+	ctxt2, cancel2 := source.NewContextWithTimeout(context.TODO(), delay)
+	defer cancel2()
+	<-ctxt2.Done()
 }
