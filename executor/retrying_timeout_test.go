@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	tbntime "github.com/turbinelabs/nonstdlib/time"
 	"github.com/turbinelabs/test/assert"
 )
 
@@ -90,31 +91,47 @@ func TestRetryingExecExecWithGlobalTimeoutTimesOutBeforeRetry(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
-	q := NewRetryingExecutor(
-		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
-		WithMaxAttempts(3),
-		WithTimeout(140*time.Millisecond),
-	)
-	defer q.Stop()
+	sync := make(chan *struct{}, 10)
+	defer close(sync)
 
-	q.Exec(
-		func(_ context.Context) (interface{}, error) {
-			return nil, errors.New("error message")
-		},
-		func(try Try) {
-			c <- try
-		},
-	)
-
-	try := <-c
-
-	if assert.True(t, try.IsError()) {
-		assert.ErrorContains(
-			t,
-			try.Error(),
-			"failed action would timeout before next retry: error message",
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		q := NewRetryingExecutor(
+			WithRetryDelayFunc(NewConstantDelayFunc(10*time.Millisecond)),
+			WithMaxAttempts(3),
+			WithTimeout(15*time.Millisecond),
+			WithTimeSource(cs),
 		)
-	}
+		defer q.Stop()
+
+		q.Exec(
+			func(_ context.Context) (interface{}, error) {
+				sync <- nil
+				return nil, errors.New("error message")
+			},
+			func(try Try) {
+				c <- try
+			},
+		)
+
+		<-sync
+		cs.Advance(0 * time.Millisecond)
+
+		for cs.TriggerAllTimers() == 0 {
+			time.Sleep(1 * time.Millisecond)
+		}
+
+		<-sync
+
+		try := <-c
+
+		if assert.True(t, try.IsError()) {
+			assert.ErrorContains(
+				t,
+				try.Error(),
+				"failed action would timeout before next retry: error message",
+			)
+		}
+	})
 }
 
 func TestRetryingExecExecManyWithGlobalTimeoutSucceeds(t *testing.T) {
@@ -336,31 +353,48 @@ func TestRetryingExecExecWithGlobalAndAttemptTimeoutsTimesOut(t *testing.T) {
 	c := make(chan Try, 10)
 	defer close(c)
 
-	q := NewRetryingExecutor(
-		WithRetryDelayFunc(NewConstantDelayFunc(1*time.Millisecond)),
-		WithMaxAttempts(10),
-		WithAttemptTimeout(20*time.Millisecond),
-		WithTimeout(50*time.Millisecond),
-	)
-	defer q.Stop()
+	sync := make(chan *struct{}, 10)
+	defer close(sync)
 
-	invocations := 0
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		q := NewRetryingExecutor(
+			WithRetryDelayFunc(NewConstantDelayFunc(10*time.Millisecond)),
+			WithMaxAttempts(10),
+			WithAttemptTimeout(20*time.Millisecond),
+			WithTimeout(50*time.Millisecond),
+			WithTimeSource(cs),
+		)
+		defer q.Stop()
 
-	q.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			invocations++
-			<-ctxt.Done()
-			return nil, errors.New("ctxt done")
-		},
-		func(try Try) {
-			c <- try
-		},
-	)
+		invocations := 0
 
-	try := <-c
+		q.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				sync <- nil
+				invocations++
+				<-ctxt.Done()
+				return nil, errors.New("ctxt done")
+			},
+			func(try Try) {
+				c <- try
+			},
+		)
 
-	assert.True(t, invocations > 1)
-	if assert.True(t, try.IsError()) {
-		assert.ErrorContains(t, try.Error(), "action exceeded timeout (50ms)")
-	}
+		<-sync
+		cs.Advance(20 * time.Millisecond)
+
+		for cs.TriggerAllTimers() == 0 {
+			time.Sleep(1 * time.Millisecond)
+		}
+
+		<-sync
+		cs.Advance(25 * time.Millisecond)
+
+		try := <-c
+
+		assert.True(t, invocations > 1)
+		if assert.True(t, try.IsError()) {
+			assert.ErrorContains(t, try.Error(), "action exceeded timeout (50ms)")
+		}
+	})
 }
