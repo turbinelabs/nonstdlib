@@ -49,7 +49,8 @@ func newPrefixedFlagSet(fs *flag.FlagSet, prefix, descriptor string) *prefixedFl
 }
 
 func (f *prefixedFlagSet) mkUsage(usage string) string {
-	return strings.Replace(usage, "{{NAME}}", f.descriptor, -1)
+	usage = strings.Replace(usage, "{{NAME}}", f.descriptor, -1)
+	return strings.Replace(usage, "{{PREFIX}}", f.prefix, -1)
 }
 
 // Var wraps the underlying FlagSet's Var function.

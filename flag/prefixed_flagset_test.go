@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	flagUsage    = "a flag for {{NAME}}"
-	flagUsageFmt = "a flag for %s"
+	flagUsage    = "a flag for {{NAME}} with prefix {{PREFIX}}"
+	flagUsageFmt = "a flag for %s with prefix %s"
 )
 
 type prefixedFlagTestCase struct {
@@ -118,7 +118,7 @@ func (tc *prefixedFlagTestCase) run(t testing.TB) {
 	f := pfs.Lookup(flagName)
 	assert.NonNil(t, f)
 	assert.Equal(t, f.Name, flagName)
-	assert.Equal(t, f.Usage, fmt.Sprintf(flagUsageFmt, "the-app-name"))
+	assert.Equal(t, f.Usage, fmt.Sprintf(flagUsageFmt, "the-app-name", "theprefix."))
 }
 
 func TestGeneratedCode(t *testing.T) {
@@ -135,7 +135,7 @@ func TestVar(t *testing.T) {
 		flagType: reflect.TypeOf(string(0)),
 		addFlag: func(f *prefixedFlagSet) interface{} {
 			var target stringValue
-			f.Var(&target, "var", "a flag for {{NAME}}")
+			f.Var(&target, "var", flagUsage)
 			return &target
 		},
 	}
