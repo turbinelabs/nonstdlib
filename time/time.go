@@ -27,6 +27,10 @@ const (
 	// UTC.
 	TurbineFormat = "2006-01-02 15:04:05.000"
 
+	// CookieFormat is the cannonical format for representing a time as
+	// a cookie as specified in https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Date
+	CookieFormat = "Mon, 2 Jan 2006 3:04:05 MST"
+
 	microsPerSecond = int64(1000000)
 	microsPerNano   = int64(time.Microsecond)
 	millisPerSecond = int64(1000)
