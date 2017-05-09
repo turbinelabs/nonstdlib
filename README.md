@@ -70,6 +70,12 @@ Each package is best described in its respective Godoc:
   provides convenience methods for dealing with golang flag.FlagSets
 - [`log`](https://godoc.org/github.com/turbinelabs/nonstdlib/log):
   provides infrastructure for topic based logging to files
+- [`math`](https://godoc.org/github.com/turbinelabs/nonstdlib/math):
+  provides mathematical utilities
+- [`must`](https://godoc.org/github.com/turbinelabs/nonstdlib/must):
+  provides extraction of useful information out of (data, error) tuples
+- [`net`](https://godoc.org/github.com/turbinelabs/nonstdlib/net):
+  provides convenience methods for dealing with the net package of the stdlib
 - [`os`](https://godoc.org/github.com/turbinelabs/nonstdlib/os):
   provides an OS interface mirroring a subset of commonly used functions and
   variables from the golang os package
@@ -81,6 +87,9 @@ Each package is best described in its respective Godoc:
   provides an interface for reporting simple statistics
 - [`strings`](https://godoc.org/github.com/turbinelabs/nonstdlib/strings):
   provides convenience methods for working with strings and string slices
+- [`text/tabwriter`](https://godoc.org/github.com/turbinelabs/nonstdlib/text/tabwriter):
+   provides a set of sane defaults for converting tab separated values into a
+   pretty column formatted output.
 - [`time`](https://godoc.org/github.com/turbinelabs/nonstdlib/time):
   provides utility functions for go time.Time instances
 

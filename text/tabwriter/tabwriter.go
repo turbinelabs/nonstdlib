@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Package tabwriter provides a set of sane defaults for converting tab separated
-// values into a pretty calumn formatted output.
+// values into a pretty column formatted output.
 package tabwriter
 
 import (
