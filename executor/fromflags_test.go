@@ -22,6 +22,7 @@ import (
 	"time"
 
 	tbnflag "github.com/turbinelabs/nonstdlib/flag"
+	"github.com/turbinelabs/nonstdlib/ptr"
 	"github.com/turbinelabs/test/assert"
 	"github.com/turbinelabs/test/log"
 )
@@ -40,6 +41,7 @@ func TestFromFlags(t *testing.T) {
 	expectedParallelism := runtime.NumCPU() * 2
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ExponentialDelayType))
+	assert.False(t, ffImpl.experimental)
 	assert.Equal(t, ffImpl.initialDelay, 100*time.Millisecond)
 	assert.Equal(t, ffImpl.maxDelay, 30*time.Second)
 	assert.Equal(t, ffImpl.maxAttempts, 8)
@@ -51,18 +53,23 @@ func TestFromFlags(t *testing.T) {
 	assert.SameInstance(t, exec, ffImpl.executor)
 	assert.SameInstance(t, ff.Make(log), exec)
 
-	execImpl := exec.(*retryingExec)
-	assert.NonNil(t, execImpl.deadlineChan)
-	assert.Equal(t, cap(execImpl.execChan), expectedMaxQueueDepth)
-	assert.Equal(t, execImpl.parallelism, expectedParallelism)
-	assert.Equal(t, execImpl.maxQueueDepth, expectedMaxQueueDepth)
-	assert.Equal(t, execImpl.maxAttempts, 8)
-	assert.NonNil(t, execImpl.delay)
-	assert.Equal(t, execImpl.delay(1), 100*time.Millisecond)
-	assert.Equal(t, execImpl.delay(100000), 30*time.Second)
-	assert.Equal(t, execImpl.timeout, 0*time.Second)
-	assert.Equal(t, execImpl.attemptTimeout, 0*time.Second)
-	assert.SameInstance(t, execImpl.log, log)
+	commonImpl, ok := exec.(*commonExec)
+	assert.True(t, ok)
+
+	retryExecImpl, ok := commonImpl.impl.(*retryingExecImpl)
+	assert.True(t, ok)
+
+	assert.NonNil(t, retryExecImpl.nextAttemptChan)
+	assert.Equal(t, cap(retryExecImpl.execChan), expectedMaxQueueDepth)
+	assert.Equal(t, retryExecImpl.maxQueueDepth, expectedMaxQueueDepth)
+	assert.Equal(t, commonImpl.parallelism, expectedParallelism)
+	assert.Equal(t, commonImpl.maxAttempts, 8)
+	assert.NonNil(t, commonImpl.delay)
+	assert.Equal(t, commonImpl.delay(1), 100*time.Millisecond)
+	assert.Equal(t, commonImpl.delay(100000), 30*time.Second)
+	assert.Equal(t, commonImpl.timeout, 0*time.Second)
+	assert.Equal(t, commonImpl.attemptTimeout, 0*time.Second)
+	assert.SameInstance(t, commonImpl.log, log)
 
 	exec.Stop()
 
@@ -80,6 +87,7 @@ func TestFromFlags(t *testing.T) {
 	})
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ConstantDelayType))
+	assert.False(t, ffImpl.experimental)
 	assert.Equal(t, ffImpl.initialDelay, time.Second)
 	assert.Equal(t, ffImpl.maxDelay, 5*time.Second)
 	assert.Equal(t, ffImpl.maxAttempts, 4)
@@ -94,17 +102,113 @@ func TestFromFlags(t *testing.T) {
 	exec = ff.Make(nil)
 	assert.SameInstance(t, exec, ffImpl.executor)
 
-	execImpl = exec.(*retryingExec)
-	assert.NonNil(t, execImpl.deadlineChan)
-	assert.Equal(t, cap(execImpl.execChan), expectedMaxQueueDepth)
-	assert.Equal(t, execImpl.parallelism, expectedParallelism)
-	assert.Equal(t, execImpl.maxQueueDepth, expectedMaxQueueDepth)
-	assert.Equal(t, execImpl.maxAttempts, 4)
-	assert.NonNil(t, execImpl.delay)
-	assert.Equal(t, execImpl.delay(1), 1*time.Second)
-	assert.Equal(t, execImpl.delay(100000), 1*time.Second)
-	assert.Equal(t, execImpl.timeout, 100*time.Millisecond)
-	assert.Nil(t, execImpl.log)
+	commonImpl, ok = exec.(*commonExec)
+	assert.True(t, ok)
+
+	retryExecImpl, ok = commonImpl.impl.(*retryingExecImpl)
+	assert.True(t, ok)
+
+	assert.NonNil(t, retryExecImpl.nextAttemptChan)
+	assert.Equal(t, cap(retryExecImpl.execChan), expectedMaxQueueDepth)
+	assert.Equal(t, retryExecImpl.maxQueueDepth, expectedMaxQueueDepth)
+	assert.Equal(t, commonImpl.parallelism, expectedParallelism)
+	assert.Equal(t, commonImpl.maxAttempts, 4)
+	assert.NonNil(t, commonImpl.delay)
+	assert.Equal(t, commonImpl.delay(1), 1*time.Second)
+	assert.Equal(t, commonImpl.delay(100000), 1*time.Second)
+	assert.Equal(t, commonImpl.timeout, 100*time.Millisecond)
+	assert.Nil(t, commonImpl.log)
+
+	exec.Stop()
+}
+
+func TestExperimentalFromFlags(t *testing.T) {
+	log := log.NewNoopLogger()
+
+	flagSet := tbnflag.NewTestFlagSet()
+
+	ff := NewFromFlags(flagSet.Scope("exec", "whatever"))
+	assert.NonNil(t, ff)
+
+	ffImpl := ff.(*fromFlags)
+	ffImpl.experimental = true
+
+	expectedMaxQueueDepth := runtime.NumCPU() * 20
+	expectedParallelism := runtime.NumCPU() * 2
+
+	assert.Equal(t, ffImpl.delayType.String(), string(ExponentialDelayType))
+	assert.Equal(t, ffImpl.initialDelay, 100*time.Millisecond)
+	assert.Equal(t, ffImpl.maxDelay, 30*time.Second)
+	assert.Equal(t, ffImpl.maxAttempts, 8)
+	assert.Equal(t, ffImpl.maxQueueDepth, expectedMaxQueueDepth)
+	assert.Equal(t, ffImpl.parallelism, expectedParallelism)
+	assert.Nil(t, ffImpl.executor)
+
+	exec := ff.Make(log)
+	assert.SameInstance(t, exec, ffImpl.executor)
+	assert.SameInstance(t, ff.Make(log), exec)
+
+	commonImpl, ok := exec.(*commonExec)
+	assert.True(t, ok)
+
+	expExecImpl, ok := commonImpl.impl.(*goroutineExecImpl)
+	assert.True(t, ok)
+
+	assert.NonNil(t, expExecImpl.sem)
+	assert.Equal(t, cap(expExecImpl.sem), expectedParallelism)
+	assert.Equal(t, commonImpl.parallelism, expectedParallelism)
+	assert.Equal(t, commonImpl.maxAttempts, 8)
+	assert.NonNil(t, commonImpl.delay)
+	assert.Equal(t, commonImpl.delay(1), 100*time.Millisecond)
+	assert.Equal(t, commonImpl.delay(100000), 30*time.Second)
+	assert.Equal(t, commonImpl.timeout, 0*time.Second)
+	assert.Equal(t, commonImpl.attemptTimeout, 0*time.Second)
+	assert.SameInstance(t, commonImpl.log, log)
+
+	exec.Stop()
+
+	ffImpl.executor = nil
+
+	flagSet.Parse([]string{
+		"-exec.experimental=true",
+		"-exec.delay-type=constant",
+		"-exec.delay=1s",
+		"-exec.max-delay=5s",
+		"-exec.max-attempts=4",
+		"-exec.max-queue=128",
+		"-exec.parallelism=99",
+		"-exec.timeout=100ms",
+		"-exec.attempt-timeout=10ms",
+	})
+
+	assert.Equal(t, ffImpl.delayType.String(), string(ConstantDelayType))
+	assert.Equal(t, ffImpl.initialDelay, time.Second)
+	assert.Equal(t, ffImpl.maxDelay, 5*time.Second)
+	assert.Equal(t, ffImpl.maxAttempts, 4)
+	assert.Equal(t, ffImpl.parallelism, 99)
+	assert.Equal(t, ffImpl.timeout, 100*time.Millisecond)
+	assert.Equal(t, ffImpl.attemptTimeout, 10*time.Millisecond)
+
+	expectedParallelism = 99
+
+	exec = ff.Make(nil)
+	assert.SameInstance(t, exec, ffImpl.executor)
+
+	commonImpl, ok = exec.(*commonExec)
+	assert.True(t, ok)
+
+	expExecImpl, ok = commonImpl.impl.(*goroutineExecImpl)
+	assert.True(t, ok)
+
+	assert.NonNil(t, expExecImpl.sem)
+	assert.Equal(t, cap(expExecImpl.sem), expectedParallelism)
+	assert.Equal(t, commonImpl.parallelism, expectedParallelism)
+	assert.Equal(t, commonImpl.maxAttempts, 4)
+	assert.NonNil(t, commonImpl.delay)
+	assert.Equal(t, commonImpl.delay(1), 1*time.Second)
+	assert.Equal(t, commonImpl.delay(100000), 1*time.Second)
+	assert.Equal(t, commonImpl.timeout, 100*time.Millisecond)
+	assert.Nil(t, commonImpl.log)
 
 	exec.Stop()
 }
@@ -115,6 +219,7 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 	ffImpl := ff.(*fromFlags)
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ExponentialDelayType))
+	assert.False(t, ffImpl.experimental)
 	assert.Equal(t, ffImpl.initialDelay, flagDefaultInitialDelay)
 	assert.Equal(t, ffImpl.maxDelay, flagDefaultMaxDelay)
 	assert.Equal(t, ffImpl.maxAttempts, flagDefaultMaxAttempts)
@@ -128,6 +233,7 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 		prefixedFlagSet,
 		FromFlagsDefaults{
 			DelayType:      ConstantDelayType,
+			Experimental:   ptr.Bool(true),
 			InitialDelay:   1 * time.Second,
 			MaxDelay:       2 * time.Second,
 			MaxAttempts:    3,
@@ -140,6 +246,7 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 	ffImpl = ff.(*fromFlags)
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ConstantDelayType))
+	assert.True(t, ffImpl.experimental)
 	assert.Equal(t, ffImpl.initialDelay, 1*time.Second)
 	assert.Equal(t, ffImpl.maxDelay, 2*time.Second)
 	assert.Equal(t, ffImpl.maxAttempts, 3)

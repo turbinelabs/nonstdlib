@@ -18,6 +18,7 @@ package time
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/turbinelabs/nonstdlib/ptr"
@@ -50,7 +51,10 @@ type ControlledSource interface {
 // WithTimeAt creates a new ControlledSource with the given time and
 // passes it to the given function for testing.
 func WithTimeAt(t time.Time, f func(ControlledSource)) {
-	s := &controlledTimeSource{now: t}
+	s := &controlledTimeSource{
+		now:   t,
+		mutex: &sync.Mutex{},
+	}
 	f(s)
 }
 
@@ -63,7 +67,13 @@ func WithCurrentTimeFrozen(f func(ControlledSource)) {
 // NewIncrementingControlledSource returns a new ControlledSource that
 // increments the controlled time by some delta every time Now() is called.
 func NewIncrementingControlledSource(at time.Time, delta time.Duration) ControlledSource {
-	return &incrementingTimeSource{&controlledTimeSource{now: at}, delta}
+	return &incrementingTimeSource{
+		&controlledTimeSource{
+			now:   at,
+			mutex: &sync.Mutex{},
+		},
+		delta,
+	}
 }
 
 // controlledTimeSource is a deterministic Source of time values. It
@@ -73,6 +83,7 @@ type controlledTimeSource struct {
 	now      time.Time
 	timers   []*controlledTimer
 	contexts []*controlledContext
+	mutex    *sync.Mutex
 }
 
 func (s *controlledTimeSource) Now() time.Time {
@@ -80,7 +91,20 @@ func (s *controlledTimeSource) Now() time.Time {
 }
 
 func (s *controlledTimeSource) NewTimer(d time.Duration) Timer {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	timer := newControlledTimer(s, d)
+	s.timers = append(s.timers, timer)
+	s.checkDeadlines()
+	return timer
+}
+
+func (s *controlledTimeSource) AfterFunc(d time.Duration, f func()) Timer {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	timer := controlledAfterFunc(s, d, f)
 	s.timers = append(s.timers, timer)
 	s.checkDeadlines()
 	return timer
@@ -94,9 +118,12 @@ func (s *controlledTimeSource) NewContextWithDeadline(
 		return context.WithCancel(parent)
 	}
 
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	ctxt := newControlledContext(parent, s, deadline)
 	s.contexts = append(s.contexts, ctxt)
 	s.checkDeadlines()
+
 	return ctxt, func() { ctxt.cancel(context.Canceled) }
 }
 
@@ -109,19 +136,28 @@ func (s *controlledTimeSource) NewContextWithTimeout(
 
 func (s *controlledTimeSource) Set(t time.Time) {
 	s.now = t
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.checkDeadlines()
 }
 
 func (s *controlledTimeSource) Advance(delta time.Duration) {
 	s.now = s.now.Add(delta)
+
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	s.checkDeadlines()
 }
 
 func (s *controlledTimeSource) TriggerAllTimers() int {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
 	var maxDeadline time.Time
 
 	for _, timer := range s.timers {
-		if timer.deadline != nil && timer.deadline.After(maxDeadline) {
+		if timer != nil && timer.deadline != nil && timer.deadline.After(maxDeadline) {
 			maxDeadline = *timer.deadline
 		}
 	}
@@ -131,21 +167,22 @@ func (s *controlledTimeSource) TriggerAllTimers() int {
 	}
 
 	s.now = maxDeadline
+
 	n, _ := s.checkDeadlines()
 	return n
 }
 
 func (s *controlledTimeSource) checkDeadlines() (int, int) {
-	var numTimers, numCtxts int
-
+	numTimers := 0
+	numCtxts := 0
 	for _, timer := range s.timers {
-		if timer.check(s.now) {
+		if timer != nil && timer.check(s.now) {
 			numTimers++
 		}
 	}
 
 	for _, ctxt := range s.contexts {
-		if ctxt.check(s.now) {
+		if ctxt != nil && ctxt.check(s.now) {
 			numCtxts++
 		}
 	}
@@ -163,8 +200,7 @@ type incrementingTimeSource struct {
 
 func (i *incrementingTimeSource) Now() time.Time {
 	t := i.now
-	i.now = i.now.Add(i.inc)
-	i.checkDeadlines()
+	i.Advance(i.inc)
 	return t
 }
 
@@ -174,6 +210,7 @@ type controlledTimer struct {
 	source   ControlledSource
 	deadline *time.Time
 	c        chan time.Time
+	f        func()
 }
 
 func newControlledTimer(source ControlledSource, delay time.Duration) *controlledTimer {
@@ -181,6 +218,14 @@ func newControlledTimer(source ControlledSource, delay time.Duration) *controlle
 		source:   source,
 		deadline: ptr.Time(source.Now().Add(delay)),
 		c:        make(chan time.Time, 1),
+	}
+}
+
+func controlledAfterFunc(source ControlledSource, delay time.Duration, f func()) *controlledTimer {
+	return &controlledTimer{
+		source:   source,
+		deadline: ptr.Time(source.Now().Add(delay)),
+		f:        f,
 	}
 }
 
@@ -202,13 +247,19 @@ func (t *controlledTimer) Stop() bool {
 
 func (t *controlledTimer) check(now time.Time) bool {
 	if t.deadline != nil && !t.deadline.After(now) {
-		// Send time if room in channel, otherwise skip it.
-		select {
-		case t.c <- now:
-		default:
+		t.deadline = nil
+		if t.c != nil {
+			// Send time if room in channel, otherwise skip it.
+			select {
+			case t.c <- now:
+			default:
+			}
 		}
 
-		t.deadline = nil
+		if t.f != nil {
+			go t.f()
+		}
+
 		return true
 	}
 

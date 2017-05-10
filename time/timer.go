@@ -37,6 +37,12 @@ func NewTimer(d time.Duration) Timer {
 	return &timer{time.NewTimer(d)}
 }
 
+// AfterFunc creates a new Timer, wrapping a time.Timer that will
+// invoke the given function after the given duration.
+func AfterFunc(d time.Duration, f func()) Timer {
+	return &timer{time.AfterFunc(d, f)}
+}
+
 type timer struct {
 	*time.Timer
 }

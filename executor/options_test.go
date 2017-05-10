@@ -25,25 +25,23 @@ import (
 )
 
 func TestWithLogger(t *testing.T) {
-	exec := &retryingExec{}
 	log := log.NewNoopLogger()
 
+	exec := &commonExec{}
 	WithLogger(log)(exec)
-
 	assert.SameInstance(t, exec.log, log)
 }
 
 func TestWithRetryDelayFunc(t *testing.T) {
-	exec := &retryingExec{}
 	d := NewConstantDelayFunc(0)
 
+	exec := &commonExec{}
 	WithRetryDelayFunc(d)(exec)
-
 	assert.SameInstance(t, exec.delay, d)
 }
 
 func TestWithMaxAttempts(t *testing.T) {
-	exec := &retryingExec{}
+	exec := &commonExec{}
 
 	WithMaxAttempts(0)(exec)
 	assert.Equal(t, exec.maxAttempts, 1)
@@ -56,7 +54,7 @@ func TestWithMaxAttempts(t *testing.T) {
 }
 
 func TestWithParallelism(t *testing.T) {
-	exec := &retryingExec{}
+	exec := &commonExec{}
 
 	WithParallelism(0)(exec)
 	assert.Equal(t, exec.parallelism, 1)
@@ -69,20 +67,23 @@ func TestWithParallelism(t *testing.T) {
 }
 
 func TestWithMaxQueueDepth(t *testing.T) {
-	exec := &retryingExec{}
+	execImpl := &retryingExecImpl{}
+	exec := &commonExec{
+		impl: execImpl,
+	}
 
 	WithMaxQueueDepth(0)(exec)
-	assert.Equal(t, exec.maxQueueDepth, 1)
+	assert.Equal(t, execImpl.maxQueueDepth, 1)
 
 	WithMaxQueueDepth(100)(exec)
-	assert.Equal(t, exec.maxQueueDepth, 100)
+	assert.Equal(t, execImpl.maxQueueDepth, 100)
 
 	WithMaxQueueDepth(-100)(exec)
-	assert.Equal(t, exec.maxQueueDepth, 1)
+	assert.Equal(t, execImpl.maxQueueDepth, 1)
 }
 
 func TestWithTimeout(t *testing.T) {
-	exec := &retryingExec{}
+	exec := &commonExec{}
 
 	WithTimeout(0 * time.Second)(exec)
 	assert.Equal(t, exec.timeout, 0*time.Second)

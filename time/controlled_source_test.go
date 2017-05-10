@@ -3,6 +3,7 @@ package time
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -29,7 +30,7 @@ func checkContext(ctxt context.Context) (bool, error) {
 
 func TestControlledSource(t *testing.T) {
 	original := time.Now()
-	source := &controlledTimeSource{now: original}
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
 
 	assert.DeepEqual(t, source.Now(), original)
 	assert.DeepEqual(t, source.Now(), original)
@@ -43,7 +44,7 @@ func TestControlledSource(t *testing.T) {
 
 func TestControlledSourceNewTimer(t *testing.T) {
 	original := time.Now()
-	source := &controlledTimeSource{now: original}
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
 
 	timer := source.NewTimer(1 * time.Second)
 
@@ -66,9 +67,53 @@ func TestControlledSourceNewTimer(t *testing.T) {
 	assert.True(t, ok)
 }
 
+func TestControlledSourceAfterFunc(t *testing.T) {
+	original := time.Now()
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
+
+	calls := make(chan time.Time, 10)
+	expectCall := func(expectedTime time.Time) {
+		timer := time.NewTimer(time.Second)
+		select {
+		case tm := <-calls:
+			assert.DeepEqual(t, tm, expectedTime)
+		case <-timer.C:
+			assert.Failed(t, "no call in 1 second")
+		}
+	}
+
+	expectNoCall := func() {
+		select {
+		case tm := <-calls:
+			assert.Tracing(t).Errorf("unexpected call: %s", tm)
+		default:
+			// ok
+		}
+	}
+
+	timer := source.AfterFunc(1*time.Second, func() { calls <- source.Now() })
+
+	source.Advance(999 * time.Millisecond)
+	expectNoCall()
+
+	source.Advance(1 * time.Millisecond)
+	expectCall(original.Add(1 * time.Second))
+
+	source.Advance(1 * time.Second)
+	expectNoCall()
+
+	timer = source.AfterFunc(1*time.Second, func() { calls <- source.Now() })
+	timer.Stop()
+	source.Advance(2 * time.Second)
+	expectNoCall()
+
+	source.AfterFunc(0*time.Second, func() { calls <- source.Now() })
+	expectCall(original.Add(4 * time.Second))
+}
+
 func TestControlledSourceNewContextWithTimeout(t *testing.T) {
 	original := time.Now()
-	source := &controlledTimeSource{now: original}
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
 
 	ctxt, cancel := source.NewContextWithTimeout(context.TODO(), 1*time.Second)
 	defer cancel()
@@ -91,7 +136,7 @@ func TestControlledSourceNewContextWithTimeout(t *testing.T) {
 
 func TestControlledSourceTriggerAllTimers(t *testing.T) {
 	original := time.Now()
-	source := &controlledTimeSource{now: original}
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
 
 	timer1 := source.NewTimer(1 * time.Second)
 	timer2 := source.NewTimer(2 * time.Second)
@@ -214,7 +259,7 @@ func TestIncrementingControlledSourceNewTimer(t *testing.T) {
 
 func TestControlledTimerReset(t *testing.T) {
 	now := time.Now()
-	s := &controlledTimeSource{now: now}
+	s := &controlledTimeSource{now: now, mutex: &sync.Mutex{}}
 
 	timer := s.NewTimer(10 * time.Second)
 
@@ -244,7 +289,7 @@ func TestControlledTimerReset(t *testing.T) {
 
 func TestControlledTimerStop(t *testing.T) {
 	now := time.Now()
-	s := &controlledTimeSource{now: now}
+	s := &controlledTimeSource{now: now, mutex: &sync.Mutex{}}
 
 	timer := s.NewTimer(10 * time.Second)
 
@@ -293,7 +338,7 @@ func TestControlledContextCancelsOnce(t *testing.T) {
 
 func TestControlledContextPropagation(t *testing.T) {
 	original := time.Now()
-	source := &controlledTimeSource{now: original}
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
 
 	parent, parentCancel := context.WithCancel(context.TODO())
 
@@ -312,7 +357,7 @@ func TestControlledContextPropagation(t *testing.T) {
 
 func TestControlledContextParentExpiresSooner(t *testing.T) {
 	original := time.Now()
-	source := &controlledTimeSource{now: original}
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
 
 	parent, parentCancel := source.NewContextWithTimeout(context.TODO(), 1*time.Second)
 	defer parentCancel()

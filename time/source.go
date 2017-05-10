@@ -34,6 +34,11 @@ type Source interface {
 	// time on its channel after the given duration.
 	NewTimer(time.Duration) Timer
 
+	// AfterFunc creates a new Timer that will invoke the given
+	// function in its own goroutine after the duration has
+	// elapsed.
+	AfterFunc(time.Duration, func()) Timer
+
 	// NewContextWithDeadline creates a new context.Context and
 	// associated context.CancelFunc with the given deadline.
 	NewContextWithDeadline(
@@ -63,6 +68,10 @@ func (s *defaultTimeSource) Now() time.Time {
 
 func (s *defaultTimeSource) NewTimer(d time.Duration) Timer {
 	return NewTimer(d)
+}
+
+func (s *defaultTimeSource) AfterFunc(d time.Duration, f func()) Timer {
+	return AfterFunc(d, f)
 }
 
 func (s *defaultTimeSource) NewContextWithDeadline(
