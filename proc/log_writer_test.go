@@ -17,74 +17,77 @@ limitations under the License.
 package proc
 
 import (
-	"bytes"
 	"fmt"
-	"log"
 	"strings"
 	"testing"
 
 	"github.com/turbinelabs/test/assert"
+	testlog "github.com/turbinelabs/test/log"
 )
 
-func makeLogWriter(prefix string) (LogWriter, *bytes.Buffer) {
-	var buffer bytes.Buffer
-	logger := log.New(&buffer, "", 0)
-	return NewLogWriter(logger, prefix), &buffer
+func makeLogWriter(prefix string) (LogWriter, <-chan string) {
+	logger, logChannel := testlog.NewChannelLogger(10)
+	return NewLogWriter(logger, prefix), logChannel
 }
 
 func TestLogWriterReaderFrom(t *testing.T) {
 	logWriter, output := makeLogWriter("FROM ")
 
 	s := "abc\nxyzpdq\r\n\r\nstuff\n\ndone\n"
-	expected := "FROM abc\nFROM xyzpdq\nFROM \nFROM stuff\nFROM \nFROM done\n"
 
 	reader := strings.NewReader(s)
 
 	_, err := logWriter.ReadFrom(reader)
 	assert.Nil(t, err)
-	assert.Equal(t, output.String(), expected)
+	assert.Equal(t, <-output, "FROM abc\n")
+	assert.Equal(t, <-output, "FROM xyzpdq\n")
+	assert.Equal(t, <-output, "FROM \n")
+	assert.Equal(t, <-output, "FROM stuff\n")
+	assert.Equal(t, <-output, "FROM \n")
+	assert.Equal(t, <-output, "FROM done\n")
 }
 
 func TestLogWriterWrite(t *testing.T) {
 	logWriter, output := makeLogWriter("WRITE ")
 
 	logWriter.Write([]byte("xyz"))
-	assert.Equal(t, output.String(), "")
+	select {
+	case s := <-output:
+		assert.Failed(t, fmt.Sprintf("expected no output, got %q", s))
+	default:
+		// ok
+	}
 
 	logWriter.Write([]byte("pdq\n"))
-	assert.Equal(t, output.String(), "WRITE xyzpdq\n")
-	output.Reset()
+	assert.Equal(t, <-output, "WRITE xyzpdq\n")
 
 	logWriter.Write([]byte("test CRLF\r\n"))
-	assert.Equal(t, output.String(), "WRITE test CRLF\n")
-	output.Reset()
+	assert.Equal(t, <-output, "WRITE test CRLF\n")
 
 	logWriter.Write([]byte("\n"))
-	assert.Equal(t, output.String(), "WRITE \n")
-	output.Reset()
+	assert.Equal(t, <-output, "WRITE \n")
 
 	logWriter.Write([]byte("\n\n"))
-	assert.Equal(t, output.String(), "WRITE \nWRITE \n")
-	output.Reset()
+	assert.Equal(t, <-output, "WRITE \n")
+	assert.Equal(t, <-output, "WRITE \n")
 
 	logWriter.Write([]byte("\r\n"))
-	assert.Equal(t, output.String(), "WRITE \n")
-	output.Reset()
+	assert.Equal(t, <-output, "WRITE \n")
 
 	logWriter.Write([]byte("\r\n\r\n"))
-	assert.Equal(t, output.String(), "WRITE \nWRITE \n")
-	output.Reset()
+	assert.Equal(t, <-output, "WRITE \n")
+	assert.Equal(t, <-output, "WRITE \n")
 
 	logWriter.Write([]byte("abc\ndef\n"))
-	assert.Equal(t, output.String(), "WRITE abc\nWRITE def\n")
-	output.Reset()
+	assert.Equal(t, <-output, "WRITE abc\n")
+	assert.Equal(t, <-output, "WRITE def\n")
 }
 
 func TestLogWriterWriteBufferExpansion(t *testing.T) {
 	logWriter, output := makeLogWriter("WRITE ")
 
 	logWriter.Write([]byte("abcdefghijklmnopqrstuvwyz\n"))
-	output.Reset()
+	<-output
 
 	expected := "WRITE "
 	for i := 0; i < 500; i++ {
@@ -94,5 +97,5 @@ func TestLogWriterWriteBufferExpansion(t *testing.T) {
 	}
 	logWriter.Write([]byte("END\n"))
 	expected += "END\n"
-	assert.Equal(t, output.String(), expected)
+	assert.Equal(t, <-output, expected)
 }
