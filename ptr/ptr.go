@@ -272,6 +272,11 @@ func Int64ValueMap(src map[string]*int64) map[string]int64 {
 	return dst
 }
 
+// Uint returns a pointer to the uint value passed in.
+func Uint(u uint) *uint {
+	return &u
+}
+
 // Uint64 returns a pointer to the uint64 value passed in.
 func Uint64(v uint64) *uint64 {
 	return &v
