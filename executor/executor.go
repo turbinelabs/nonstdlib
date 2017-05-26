@@ -20,11 +20,7 @@ package executor
 
 //go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
 
-import (
-	"context"
-
-	"github.com/turbinelabs/nonstdlib/stats"
-)
+import "context"
 
 // Func is invoked to execute an action. The given Context should be
 // used to make HTTP requests. The function should return as soon as
@@ -70,7 +66,9 @@ type Executor interface {
 	// callbacks are not invoked.
 	Stop()
 
-	// Submits diagnostic information about executor behavior to
-	// the given stats.Stats.
-	SetStats(stats.Stats)
+	// Sets the DiagnosticsCallback for this Executor. Must be
+	// called before the first invocation of any Exec
+	// function. See also the WithDiagnostics Option to
+	// NewRetryingExecutor and NewGoroutineExecutor.
+	SetDiagnosticsCallback(DiagnosticsCallback)
 }

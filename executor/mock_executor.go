@@ -5,7 +5,6 @@ package executor
 
 import (
 	gomock "github.com/golang/mock/gomock"
-	stats "github.com/turbinelabs/nonstdlib/stats"
 )
 
 // Mock of Executor interface
@@ -69,10 +68,10 @@ func (_mr *_MockExecutorRecorder) Stop() *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "Stop")
 }
 
-func (_m *MockExecutor) SetStats(_param0 stats.Stats) {
-	_m.ctrl.Call(_m, "SetStats", _param0)
+func (_m *MockExecutor) SetDiagnosticsCallback(_param0 DiagnosticsCallback) {
+	_m.ctrl.Call(_m, "SetDiagnosticsCallback", _param0)
 }
 
-func (_mr *_MockExecutorRecorder) SetStats(arg0 interface{}) *gomock.Call {
-	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetStats", arg0)
+func (_mr *_MockExecutorRecorder) SetDiagnosticsCallback(arg0 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "SetDiagnosticsCallback", arg0)
 }

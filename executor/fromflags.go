@@ -51,7 +51,8 @@ const (
 // flags.
 type FromFlags interface {
 	// Returns the configured Executor. Multiple invocations
-	// return the same Executor.
+	// return the same Executor even if the arguments
+	// change. DiagnosticsCallback may be nil.
 	Make(*log.Logger) Executor
 }
 

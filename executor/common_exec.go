@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/turbinelabs/nonstdlib/stats"
 	tbntime "github.com/turbinelabs/nonstdlib/time"
 )
 
@@ -45,9 +44,9 @@ type commonExec struct {
 	timeout        time.Duration
 	attemptTimeout time.Duration
 
-	time  tbntime.Source
-	log   *log.Logger
-	stats stats.Stats
+	time tbntime.Source
+	log  *log.Logger
+	diag DiagnosticsCallback
 }
 
 type pair struct {
@@ -60,6 +59,8 @@ func (c *commonExec) ExecAndForget(f Func) {
 }
 
 func (c *commonExec) Exec(f Func, cb CallbackFunc) {
+	defer c.diag.TaskStarted(1)
+
 	start := c.time.Now()
 	globalDeadline := mkDeadline(start, c.timeout)
 	ctxt, ctxtCancel := c.mkContext(globalDeadline, false)
@@ -78,13 +79,13 @@ func (c *commonExec) Exec(f Func, cb CallbackFunc) {
 }
 
 func (c *commonExec) ExecMany(fs []Func, cb ManyCallbackFunc) {
-	defer c.stats.Inc(execManyWidth, int64(len(fs)))
+	defer c.diag.TaskStarted(len(fs))
 
 	c.execMany(fs, cb)
 }
 
 func (c *commonExec) ExecGathered(fs []Func, cb CallbackFunc) {
-	defer c.stats.Inc(execGatheredWidth, int64(len(fs)))
+	defer c.diag.TaskStarted(len(fs))
 
 	c.execGathered(fs, cb)
 }
@@ -93,8 +94,8 @@ func (c *commonExec) Stop() {
 	c.impl.stop(c)
 }
 
-func (c *commonExec) SetStats(s stats.Stats) {
-	c.stats = stats.NewAsyncStats(s)
+func (c *commonExec) SetDiagnosticsCallback(diag DiagnosticsCallback) {
+	c.diag = diag
 }
 
 func (c *commonExec) execMany(
@@ -273,7 +274,8 @@ func mkDeadline(start time.Time, d time.Duration) time.Time {
 }
 
 func (c *commonExec) attempt(r *retry) {
-	c.stats.TimingDuration(actionDelaytime, c.time.Now().Sub(r.nextAttempt))
+	attemptStart := c.time.Now()
+	c.diag.AttemptStarted(attemptStart.Sub(r.nextAttempt))
 
 	var t Try
 	ctxtErrType := checkCtxtError(r.ctxt, nil)
@@ -290,10 +292,15 @@ func (c *commonExec) attempt(r *retry) {
 		t = NewError(r.ctxt.Err())
 	}
 
+	attemptDuration := c.time.Now().Sub(attemptStart)
+	attemptResult := AttemptSuccess
+	retry := false
+
 	if t.IsError() {
 		if ctxtErrType == globalTimeoutError {
 			// global timeout expired
-			c.stats.Inc(actionGlobalTimeout, 1)
+			attemptResult = AttemptGlobalTimeout
+
 			t = NewError(
 				fmt.Errorf(
 					"action exceeded timeout (%s)",
@@ -302,53 +309,58 @@ func (c *commonExec) attempt(r *retry) {
 			)
 		} else if ctxtErrType == cancellationError {
 			// canceled
-			c.stats.Inc(actionCanceled, 1)
+			attemptResult = AttemptCancellation
+
 			t = NewError(errors.New("action canceled"))
+		} else if ctxtErrType == attemptTimeoutError {
+			// retry timeout expired, just count it
+			attemptResult = AttemptTimeout
+			t = NewError(
+				fmt.Errorf(
+					"action exceeded attempt timeout (%s)",
+					c.attemptTimeout,
+				),
+			)
+
+			retry = true
 		} else {
-			if ctxtErrType == attemptTimeoutError {
-				// retry timeout expired, just count it
-				c.stats.Inc(actionRetryTimeout, 1)
-				t = NewError(
-					fmt.Errorf(
-						"action exceeded attempt timeout (%s)",
-						c.attemptTimeout,
-					),
-				)
-			} else {
-				c.stats.Inc(actionFailure, 1)
-			}
+			attemptResult = AttemptError
 
 			// TODO: check if error is something want actually want to
 			// retry (see #1686)
-			delay := c.delay(r.attempts)
-			r.nextAttempt = c.time.Now().Add(delay)
-
-			if limit, ok := r.ctxt.Deadline(); ok && limit.Before(r.nextAttempt) {
-				// context will timeout before retry
-				c.stats.Inc(actionGlobalTimeout, 1)
-				t = NewError(fmt.Errorf(
-					"failed action would timeout before next retry: %s",
-					t.Error().Error(),
-				))
-			} else if c.impl.retry(c, delay, r) {
-				c.stats.Inc(actionRetry, 1)
-				return
-			} else {
-				c.stats.Inc(actionRetriesExhausted, 1)
-			}
+			retry = true
 		}
 	}
 
-	complete := c.time.Now()
-	c.stats.TimingDuration("action_time", complete.Sub(r.start))
+	c.diag.AttemptCompleted(attemptResult, attemptDuration)
+
+	if retry {
+		delay := c.delay(r.attempts)
+		r.nextAttempt = c.time.Now().Add(delay)
+
+		if limit, ok := r.ctxt.Deadline(); ok && limit.Before(r.nextAttempt) {
+			// context will timeout before retry
+			attemptResult = AttemptGlobalTimeout
+
+			t = NewError(fmt.Errorf(
+				"failed action would timeout before next retry: %s",
+				t.Error().Error(),
+			))
+		} else if c.impl.retry(c, delay, r) {
+			return
+		}
+	}
+
+	defer func() { c.diag.TaskCompleted(attemptResult, c.time.Now().Sub(r.start)) }()
 
 	if r.ctxtCancel != nil {
 		r.ctxtCancel()
 	}
 
 	if r.cb != nil {
+		callbackStart := c.time.Now()
 		r.cb(t)
-		c.stats.TimingDuration("action_callback_time", c.time.Now().Sub(complete))
+		c.diag.CallbackDuration(c.time.Now().Sub(callbackStart))
 	}
 }
 

@@ -49,7 +49,10 @@ func TestFromFlags(t *testing.T) {
 	assert.Equal(t, ffImpl.parallelism, expectedParallelism)
 	assert.Nil(t, ffImpl.executor)
 
+	diag := NewNoopDiagnosticsCallback()
+
 	exec := ff.Make(log)
+	exec.SetDiagnosticsCallback(diag)
 	assert.SameInstance(t, exec, ffImpl.executor)
 	assert.SameInstance(t, ff.Make(log), exec)
 
@@ -70,6 +73,7 @@ func TestFromFlags(t *testing.T) {
 	assert.Equal(t, commonImpl.timeout, 0*time.Second)
 	assert.Equal(t, commonImpl.attemptTimeout, 0*time.Second)
 	assert.SameInstance(t, commonImpl.log, log)
+	assert.SameInstance(t, commonImpl.diag, diag)
 
 	exec.Stop()
 
@@ -118,6 +122,9 @@ func TestFromFlags(t *testing.T) {
 	assert.Equal(t, commonImpl.delay(100000), 1*time.Second)
 	assert.Equal(t, commonImpl.timeout, 100*time.Millisecond)
 	assert.Nil(t, commonImpl.log)
+	assert.NonNil(t, commonImpl.diag)
+	_, ok = commonImpl.diag.(*noopDiagnosticsCallback)
+	assert.True(t, ok)
 
 	exec.Stop()
 }
@@ -144,7 +151,10 @@ func TestExperimentalFromFlags(t *testing.T) {
 	assert.Equal(t, ffImpl.parallelism, expectedParallelism)
 	assert.Nil(t, ffImpl.executor)
 
+	diag := NewNoopDiagnosticsCallback()
+
 	exec := ff.Make(log)
+	exec.SetDiagnosticsCallback(diag)
 	assert.SameInstance(t, exec, ffImpl.executor)
 	assert.SameInstance(t, ff.Make(log), exec)
 
@@ -164,6 +174,7 @@ func TestExperimentalFromFlags(t *testing.T) {
 	assert.Equal(t, commonImpl.timeout, 0*time.Second)
 	assert.Equal(t, commonImpl.attemptTimeout, 0*time.Second)
 	assert.SameInstance(t, commonImpl.log, log)
+	assert.SameInstance(t, commonImpl.diag, diag)
 
 	exec.Stop()
 
@@ -209,6 +220,8 @@ func TestExperimentalFromFlags(t *testing.T) {
 	assert.Equal(t, commonImpl.delay(100000), 1*time.Second)
 	assert.Equal(t, commonImpl.timeout, 100*time.Millisecond)
 	assert.Nil(t, commonImpl.log)
+	_, ok = commonImpl.diag.(*noopDiagnosticsCallback)
+	assert.True(t, ok)
 
 	exec.Stop()
 }

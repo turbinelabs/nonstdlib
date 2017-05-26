@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/turbinelabs/nonstdlib/stats"
 	tbntime "github.com/turbinelabs/nonstdlib/time"
 )
 
@@ -98,7 +97,7 @@ func NewRetryingExecutor(options ...Option) Executor {
 		delay:          defaultDelayFunc,
 		timeout:        noTimeout,
 		attemptTimeout: noTimeout,
-		stats:          stats.NewNoopStats(),
+		diag:           NewNoopDiagnosticsCallback(),
 		impl:           impl,
 	}
 

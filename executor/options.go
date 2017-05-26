@@ -19,6 +19,13 @@ func WithLogger(log *log.Logger) Option {
 	}
 }
 
+// WithDiagnostics sets a DiagnosticsCallback for the Executor.
+func WithDiagnostics(cb DiagnosticsCallback) Option {
+	return func(e *commonExec) {
+		e.diag = cb
+	}
+}
+
 // WithRetryDelayFunc sets the DelayFunc used when retrying actions.
 func WithRetryDelayFunc(d DelayFunc) Option {
 	return func(e *commonExec) {

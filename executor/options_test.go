@@ -32,6 +32,14 @@ func TestWithLogger(t *testing.T) {
 	assert.SameInstance(t, exec.log, log)
 }
 
+func TestWithDiagnostics(t *testing.T) {
+	diag := NewNoopDiagnosticsCallback()
+
+	exec := &commonExec{}
+	WithDiagnostics(diag)(exec)
+	assert.SameInstance(t, exec.diag, diag)
+}
+
 func TestWithRetryDelayFunc(t *testing.T) {
 	d := NewConstantDelayFunc(0)
 
