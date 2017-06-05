@@ -43,6 +43,30 @@ func Int(i int, e error) int {
 	return i
 }
 
+// Int64 returns the int64 i or logs a fatal error e.
+func Int64(i int64, e error) int64 {
+	die(e)
+	return i
+}
+
+// Uint returns the uint u or logs a fatal error e.
+func Uint(u uint, e error) uint {
+	die(e)
+	return u
+}
+
+// Uint64 returns the uint u or logs a fatal error e.
+func Uint64(u uint64, e error) uint64 {
+	die(e)
+	return u
+}
+
+// Float64 returns the float f or logs a fatal error e.
+func Float64(f float64, e error) float64 {
+	die(e)
+	return f
+}
+
 // Any returns the interface{} i or logs a fatal error e.
 func Any(i interface{}, e error) interface{} {
 	die(e)

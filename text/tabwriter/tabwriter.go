@@ -98,13 +98,13 @@ func (t tbnTabWriter) FormatWithHeader(hdr, in string) string {
 
 // Format returns the input with the content aligned by tabs. If a config is
 // specified it will be used otherwise DefaultConfig will be used.
-func Format(in string, cfg ...Config) string {
+func Format(in string) string {
 	return defaultWriter.Format(in)
 }
 
 // FormatWithHeader returns the input with the content aligned by tabs and
 // includes a header even if no data is provided. If a config is specified it
 // will be used otherwise DefaultConfig will be used.
-func FormatWithHeader(hdr, in string, cfg ...Config) string {
+func FormatWithHeader(hdr, in string) string {
 	return defaultWriter.FormatWithHeader(hdr, in)
 }
