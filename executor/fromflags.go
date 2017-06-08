@@ -39,7 +39,7 @@ const (
 	ExponentialDelayType DelayType = "exponential"
 
 	flagDefaultDelayType      = ExponentialDelayType
-	flagDefaultExperimental   = false
+	flagDefaultLegacy         = false
 	flagDefaultInitialDelay   = 100 * time.Millisecond
 	flagDefaultMaxDelay       = 30 * time.Second
 	flagDefaultMaxAttempts    = 8
@@ -60,7 +60,7 @@ type FromFlags interface {
 // flags. Values are ignored if they are the zero value for their
 // type.
 type FromFlagsDefaults struct {
-	Experimental   *bool
+	Legacy         bool
 	DelayType      DelayType
 	InitialDelay   time.Duration
 	MaxDelay       time.Duration
@@ -98,10 +98,10 @@ func NewFromFlagsWithDefaults(
 	)
 
 	f.BoolVar(
-		&ff.experimental,
-		"experimental",
-		defaults.DefaultExperimental(),
-		"Enables an experiment goroutine-based executor.",
+		&ff.legacy,
+		"legacy",
+		defaults.DefaultLegacy(),
+		"Enables the legacy queue-based executor.",
 	)
 
 	f.DurationVar(
@@ -169,13 +169,10 @@ func (defaults FromFlagsDefaults) DefaultDelayType() DelayType {
 	return flagDefaultDelayType
 }
 
-// DefaultExperimental returns the experimental setting. If not
-// overridden the default delay type is false.
-func (defaults FromFlagsDefaults) DefaultExperimental() bool {
-	if defaults.Experimental != nil {
-		return *defaults.Experimental
-	}
-	return flagDefaultExperimental
+// DefaultLegacy returns the legacy setting. If not overridden the
+// default is false.
+func (defaults FromFlagsDefaults) DefaultLegacy() bool {
+	return defaults.Legacy
 }
 
 // DefaultInitialDelay returns the default initial delay. If not
@@ -251,7 +248,7 @@ func (defaults FromFlagsDefaults) DefaultAttemptTimeout() time.Duration {
 
 type fromFlags struct {
 	delayType      tbnflag.Choice
-	experimental   bool
+	legacy         bool
 	initialDelay   time.Duration
 	maxDelay       time.Duration
 	maxAttempts    int
@@ -283,10 +280,10 @@ func (ff *fromFlags) Make(log *log.Logger) Executor {
 			WithLogger(log),
 		}
 
-		if ff.experimental {
-			ff.executor = NewGoroutineExecutor(options...)
-		} else {
+		if ff.legacy {
 			ff.executor = NewRetryingExecutor(options...)
+		} else {
+			ff.executor = NewGoroutineExecutor(options...)
 		}
 	}
 

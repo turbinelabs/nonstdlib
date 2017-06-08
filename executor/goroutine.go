@@ -47,6 +47,16 @@ func NewGoroutineExecutor(options ...Option) Executor {
 
 	impl.sem = make(semaphore, e.parallelism)
 
+	if e.log != nil {
+		e.log.Printf(
+			"goroutine executor: max parallelism %d, max attempts %d, global timeout %s, attempt timeout %s",
+			e.parallelism,
+			e.maxAttempts,
+			e.timeout,
+			e.attemptTimeout,
+		)
+	}
+
 	return e
 }
 

@@ -22,12 +22,11 @@ import (
 	"time"
 
 	tbnflag "github.com/turbinelabs/nonstdlib/flag"
-	"github.com/turbinelabs/nonstdlib/ptr"
 	"github.com/turbinelabs/test/assert"
 	"github.com/turbinelabs/test/log"
 )
 
-func TestFromFlags(t *testing.T) {
+func TestLegacyFromFlags(t *testing.T) {
 	log := log.NewNoopLogger()
 
 	flagSet := tbnflag.NewTestFlagSet()
@@ -36,12 +35,12 @@ func TestFromFlags(t *testing.T) {
 	assert.NonNil(t, ff)
 
 	ffImpl := ff.(*fromFlags)
+	ffImpl.legacy = true
 
 	expectedMaxQueueDepth := runtime.NumCPU() * 20
 	expectedParallelism := runtime.NumCPU() * 2
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ExponentialDelayType))
-	assert.False(t, ffImpl.experimental)
 	assert.Equal(t, ffImpl.initialDelay, 100*time.Millisecond)
 	assert.Equal(t, ffImpl.maxDelay, 30*time.Second)
 	assert.Equal(t, ffImpl.maxAttempts, 8)
@@ -78,8 +77,10 @@ func TestFromFlags(t *testing.T) {
 	exec.Stop()
 
 	ffImpl.executor = nil
+	ffImpl.legacy = false
 
 	flagSet.Parse([]string{
+		"-exec.legacy=true",
 		"-exec.delay-type=constant",
 		"-exec.delay=1s",
 		"-exec.max-delay=5s",
@@ -91,7 +92,7 @@ func TestFromFlags(t *testing.T) {
 	})
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ConstantDelayType))
-	assert.False(t, ffImpl.experimental)
+	assert.True(t, ffImpl.legacy)
 	assert.Equal(t, ffImpl.initialDelay, time.Second)
 	assert.Equal(t, ffImpl.maxDelay, 5*time.Second)
 	assert.Equal(t, ffImpl.maxAttempts, 4)
@@ -129,7 +130,7 @@ func TestFromFlags(t *testing.T) {
 	exec.Stop()
 }
 
-func TestExperimentalFromFlags(t *testing.T) {
+func TestFromFlags(t *testing.T) {
 	log := log.NewNoopLogger()
 
 	flagSet := tbnflag.NewTestFlagSet()
@@ -138,7 +139,6 @@ func TestExperimentalFromFlags(t *testing.T) {
 	assert.NonNil(t, ff)
 
 	ffImpl := ff.(*fromFlags)
-	ffImpl.experimental = true
 
 	expectedMaxQueueDepth := runtime.NumCPU() * 20
 	expectedParallelism := runtime.NumCPU() * 2
@@ -181,7 +181,6 @@ func TestExperimentalFromFlags(t *testing.T) {
 	ffImpl.executor = nil
 
 	flagSet.Parse([]string{
-		"-exec.experimental=true",
 		"-exec.delay-type=constant",
 		"-exec.delay=1s",
 		"-exec.max-delay=5s",
@@ -232,7 +231,7 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 	ffImpl := ff.(*fromFlags)
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ExponentialDelayType))
-	assert.False(t, ffImpl.experimental)
+	assert.False(t, ffImpl.legacy)
 	assert.Equal(t, ffImpl.initialDelay, flagDefaultInitialDelay)
 	assert.Equal(t, ffImpl.maxDelay, flagDefaultMaxDelay)
 	assert.Equal(t, ffImpl.maxAttempts, flagDefaultMaxAttempts)
@@ -246,7 +245,7 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 		prefixedFlagSet,
 		FromFlagsDefaults{
 			DelayType:      ConstantDelayType,
-			Experimental:   ptr.Bool(true),
+			Legacy:         true,
 			InitialDelay:   1 * time.Second,
 			MaxDelay:       2 * time.Second,
 			MaxAttempts:    3,
@@ -259,7 +258,7 @@ func TestFromFlagsWithDefaults(t *testing.T) {
 	ffImpl = ff.(*fromFlags)
 
 	assert.Equal(t, ffImpl.delayType.String(), string(ConstantDelayType))
-	assert.True(t, ffImpl.experimental)
+	assert.True(t, ffImpl.legacy)
 	assert.Equal(t, ffImpl.initialDelay, 1*time.Second)
 	assert.Equal(t, ffImpl.maxDelay, 2*time.Second)
 	assert.Equal(t, ffImpl.maxAttempts, 3)
