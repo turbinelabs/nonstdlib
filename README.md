@@ -17,6 +17,7 @@
 [![GoDoc](https://godoc.org/github.com/turbinelabs/nonstdlib?status.svg)](https://godoc.org/github.com/turbinelabs/nonstdlib)
 [![CircleCI](https://circleci.com/gh/turbinelabs/nonstdlib.svg?style=shield)](https://circleci.com/gh/turbinelabs/nonstdlib)
 [![Go Report Card](https://goreportcard.com/badge/github.com/turbinelabs/nonstdlib)](https://goreportcard.com/report/github.com/turbinelabs/nonstdlib)
+[![codecov](https://codecov.io/gh/turbinelabs/nonstdlib/branch/master/graph/badge.svg)](https://codecov.io/gh/turbinelabs/nonstdlib)
 
 The nonstdlib project comprises extensions to the Go stdlib, either to increase
 feature set or testability, and other utility code. The nonstdlib project has
