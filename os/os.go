@@ -38,6 +38,7 @@ type OS interface {
 	Getenv(key string) string
 	LookupEnv(key string) (value string, found bool)
 	ExpandEnv(s string) string
+	Setenv(key, value string) error
 	Exit(code int)
 	Stdin() io.Reader
 	Stdout() io.Writer
@@ -48,6 +49,7 @@ type OS interface {
 	Rename(oldpath, newpath string) error
 	Open(name string) (*os.File, error)
 	OpenFile(name string, flag int, perm os.FileMode) (*os.File, error)
+	MkdirAll(path string, perm os.FileMode) error
 
 	// Constructs a new DirReader via NewDirReader.
 	NewDirReader(dir string) DirReader
@@ -74,6 +76,10 @@ func (x goOS) LookupEnv(key string) (string, bool) {
 
 func (x goOS) ExpandEnv(s string) string {
 	return os.ExpandEnv(s)
+}
+
+func (x goOS) Setenv(key, value string) error {
+	return os.Setenv(key, value)
 }
 
 func (x goOS) Exit(code int) {
@@ -114,6 +120,10 @@ func (x goOS) Open(name string) (*os.File, error) {
 
 func (x goOS) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
 	return os.OpenFile(name, flag, perm)
+}
+
+func (x goOS) MkdirAll(path string, perm os.FileMode) error {
+	return os.MkdirAll(path, perm)
 }
 
 func (x goOS) NewDirReader(dir string) DirReader {

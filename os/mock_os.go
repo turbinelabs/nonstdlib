@@ -71,6 +71,16 @@ func (_mr *_MockOSRecorder) ExpandEnv(arg0 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "ExpandEnv", arg0)
 }
 
+func (_m *MockOS) Setenv(key string, value string) error {
+	ret := _m.ctrl.Call(_m, "Setenv", key, value)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockOSRecorder) Setenv(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "Setenv", arg0, arg1)
+}
+
 func (_m *MockOS) Exit(code int) {
 	_m.ctrl.Call(_m, "Exit", code)
 }
@@ -170,6 +180,16 @@ func (_m *MockOS) OpenFile(name string, flag int, perm os.FileMode) (*os.File, e
 
 func (_mr *_MockOSRecorder) OpenFile(arg0, arg1, arg2 interface{}) *gomock.Call {
 	return _mr.mock.ctrl.RecordCall(_mr.mock, "OpenFile", arg0, arg1, arg2)
+}
+
+func (_m *MockOS) MkdirAll(path string, perm os.FileMode) error {
+	ret := _m.ctrl.Call(_m, "MkdirAll", path, perm)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+func (_mr *_MockOSRecorder) MkdirAll(arg0, arg1 interface{}) *gomock.Call {
+	return _mr.mock.ctrl.RecordCall(_mr.mock, "MkdirAll", arg0, arg1)
 }
 
 func (_m *MockOS) NewDirReader(dir string) DirReader {
