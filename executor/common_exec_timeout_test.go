@@ -376,7 +376,7 @@ func testExecWithGlobalAndAttemptTimeoutsTimesOut(t *testing.T, mk mkExecutor) {
 
 		try := <-c
 
-		assert.True(t, invocations > 1)
+		assert.GreaterThan(t, invocations, 1)
 		if assert.True(t, try.IsError()) {
 			assert.ErrorContains(t, try.Error(), "action exceeded timeout (50ms)")
 		}

@@ -55,5 +55,5 @@ func TestPoissonDistribution(t *testing.T) {
 	averageDelay := totalDelay / time.Duration(n)
 	percentageOfExpected := float64(time.Second-averageDelay) / float64(time.Second) * 100.0
 
-	assert.True(t, math.Abs(percentageOfExpected) < 1.0)
+	assert.LessThan(t, math.Abs(percentageOfExpected), 1.0)
 }
