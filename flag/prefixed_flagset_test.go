@@ -163,3 +163,15 @@ func TestScope(t *testing.T) {
 	assert.Equal(t, pfsImpl.prefix, "theprefix.scope.")
 	assert.Equal(t, pfsImpl.descriptor, "the-app-name: scope-name")
 }
+
+func TestGetScope(t *testing.T) {
+	fs := flag.NewFlagSet("scoping test", flag.PanicOnError)
+	wrapped := Wrap(fs)
+	assert.Equal(t, wrapped.GetScope(), "")
+
+	scoped := wrapped.Scope("theprefix", "")
+	assert.Equal(t, scoped.GetScope(), "theprefix.")
+
+	scopedAgain := scoped.Scope("more", "")
+	assert.Equal(t, scopedAgain.GetScope(), "theprefix.more.")
+}

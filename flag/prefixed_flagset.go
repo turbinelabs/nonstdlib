@@ -67,6 +67,10 @@ func (f *prefixedFlagSet) Scope(prefix, descriptor string) FlagSet {
 	return newPrefixedFlagSet(f.FlagSet, f.prefix+prefix, descriptor)
 }
 
+func (f *prefixedFlagSet) GetScope() string {
+	return f.prefix
+}
+
 func (f *prefixedFlagSet) Unwrap() *flag.FlagSet {
 	return f.FlagSet
 }

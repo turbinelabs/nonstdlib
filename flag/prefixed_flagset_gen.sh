@@ -70,6 +70,10 @@ type FlagSet interface {
 	// replaced with the given description.
 	Scope(prefix, description string) FlagSet
 
+	// GetScope retrieves this FlagSet's scoping prefix, including
+	// a trailing period.
+	GetScope() string
+
 	// Unwrap returns the flag.FlagSet underlying this FlagSet.
 	Unwrap() *flag.FlagSet
 

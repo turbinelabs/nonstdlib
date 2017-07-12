@@ -41,6 +41,10 @@ func (fs *flagSet) Scope(prefix, description string) FlagSet {
 	return newPrefixedFlagSet(fs.FlagSet, prefix, description)
 }
 
+func (fs *flagSet) GetScope() string {
+	return ""
+}
+
 func (fs *flagSet) Unwrap() *flag.FlagSet {
 	return fs.FlagSet
 }
