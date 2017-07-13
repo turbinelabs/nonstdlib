@@ -234,10 +234,7 @@ func TestLoggingDiagnosticsCallbackLog(t *testing.T) {
 
 	ldc.(*loggingDiagnosticsCallback).log()
 
-	expected := `Executor Diagnostics
-tasks started: 0
-`
-	assert.Equal(t, buffer.String(), expected)
+	assert.Equal(t, buffer.String(), "tasks started: 0\n")
 	buffer.Reset()
 
 	ldc.TaskStarted(1)
@@ -260,8 +257,7 @@ tasks started: 0
 
 	ldc.(*loggingDiagnosticsCallback).log()
 
-	expected = `Executor Diagnostics
-tasks started: 1
+	expected := `tasks started: 1
 tasks completed, AttemptSuccess: 4 (avg 1ms; max 1ms)
 tasks completed, AttemptTimeout: 1 (avg 1ms; max 1ms)
 attempts started: 2 (avg 1ms; max 1ms)
@@ -281,7 +277,6 @@ func TestLoggingDiagnosticsCallbackLogPeriodically(t *testing.T) {
 		for cs.TriggerAllTimers() == 0 {
 			time.Sleep(10 * time.Millisecond)
 		}
-		assert.Equal(t, <-ch, "Executor Diagnostics\n")
 		assert.Equal(t, <-ch, "tasks started: 0\n")
 
 		ldc.TaskStarted(1)
@@ -289,7 +284,6 @@ func TestLoggingDiagnosticsCallbackLogPeriodically(t *testing.T) {
 		for cs.TriggerAllTimers() == 0 {
 			time.Sleep(10 * time.Millisecond)
 		}
-		assert.Equal(t, <-ch, "Executor Diagnostics\n")
 		assert.Equal(t, <-ch, "tasks started: 1\n")
 
 		ldc.TaskStarted(2)
@@ -298,7 +292,6 @@ func TestLoggingDiagnosticsCallbackLogPeriodically(t *testing.T) {
 		for cs.TriggerAllTimers() == 0 {
 			time.Sleep(10 * time.Millisecond)
 		}
-		assert.Equal(t, <-ch, "Executor Diagnostics\n")
 		assert.Equal(t, <-ch, "tasks started: 3\n")
 	})
 }

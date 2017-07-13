@@ -187,14 +187,15 @@ func (cd *countedDuration) format(prefix string) (string, bool) {
 type countedDurationsByResult map[AttemptResult]*countedDuration
 
 func newCountedDurationsByResult() countedDurationsByResult {
-	return countedDurationsByResult{
-		AttemptSuccess:       &countedDuration{},
-		AttemptTimeout:       &countedDuration{},
-		AttemptGlobalTimeout: &countedDuration{},
-		AttemptCancellation:  &countedDuration{},
-		AttemptError:         &countedDuration{},
-		attemptUnknown:       &countedDuration{},
-	}
+	cdbr := make(countedDurationsByResult, numAttemptResults+1)
+
+	ForEachAttemptResult(func(r AttemptResult) {
+		cdbr[r] = &countedDuration{}
+	})
+
+	cdbr[attemptUnknown] = &countedDuration{}
+
+	return cdbr
 }
 
 func (cdbr countedDurationsByResult) add(result AttemptResult, d time.Duration) {
@@ -280,7 +281,6 @@ func (ldc *loggingDiagnosticsCallback) log() {
 	data := ldc.resetData()
 
 	l := ldc.logger
-	l.Println("Executor Diagnostics")
 	l.Printf("tasks started: %d", data.tasksStarted)
 	if rows, any := data.tasksCompleted.format("tasks completed, "); any {
 		for _, s := range rows {
