@@ -2,7 +2,16 @@ package executor
 
 //go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
 
-import "time"
+import (
+	"fmt"
+	"io"
+	"log"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	tbntime "github.com/turbinelabs/nonstdlib/time"
+)
 
 // AttemptResult represents whether or not a task attempt (e.g. an
 // individual invocation of a Func passed to Exec) succeeded or
@@ -31,7 +40,12 @@ const (
 	// AttemptError indicates that the attempt failed because it
 	// returned an error.
 	AttemptError
+
+	// Internal use only. Must come last.
+	attemptUnknown
 )
+
+const numAttemptResults = int(attemptUnknown)
 
 // DiagnosticsCallback provides information about tasks and attempts
 // within an Executor. Typically, this interface is used to record
@@ -69,6 +83,11 @@ func NewNoopDiagnosticsCallback() DiagnosticsCallback {
 	return &noopDiagnosticsCallback{}
 }
 
+// Valid returns true if the AttemptResult is a valid value.
+func (r AttemptResult) Valid() bool {
+	return r >= AttemptSuccess && r <= AttemptError
+}
+
 // String returns a string representation of the AttemptResult.
 func (r AttemptResult) String() string {
 	switch r {
@@ -87,6 +106,12 @@ func (r AttemptResult) String() string {
 	}
 }
 
+func ForEachAttemptResult(f func(AttemptResult)) {
+	for r := AttemptSuccess; r < attemptUnknown; r++ {
+		f(r)
+	}
+}
+
 type noopDiagnosticsCallback struct{}
 
 func (ndc *noopDiagnosticsCallback) TaskStarted(_ int)                                 {}
@@ -94,3 +119,228 @@ func (ndc *noopDiagnosticsCallback) TaskCompleted(_ AttemptResult, _ time.Durati
 func (ndc *noopDiagnosticsCallback) AttemptStarted(_ time.Duration)                    {}
 func (ndc *noopDiagnosticsCallback) AttemptCompleted(_ AttemptResult, _ time.Duration) {}
 func (ndc *noopDiagnosticsCallback) CallbackDuration(_ time.Duration)                  {}
+
+// NewLoggingDiagnosticsCallback creates an implementation of
+// DiagnosticsCallback that logs diagnostics information periodically.
+func NewLoggingDiagnosticsCallback(logger *log.Logger, period time.Duration) DiagnosticsCallback {
+	return newLoggingDiagnosticsCallback(logger, period, tbntime.NewSource())
+}
+
+func newLoggingDiagnosticsCallback(
+	logger *log.Logger,
+	period time.Duration,
+	source tbntime.Source,
+) DiagnosticsCallback {
+	ldc := &loggingDiagnosticsCallback{
+		logger: logger,
+		period: period,
+		data:   newDiagnosticsData(),
+		time:   source,
+		quit:   make(chan struct{}),
+	}
+
+	go ldc.logPeriodically()
+
+	return ldc
+}
+
+type countedDuration struct {
+	count         int64
+	totalDuration int64
+	maxDuration   int64
+}
+
+func (cd *countedDuration) add(d time.Duration) {
+	atomic.AddInt64(&cd.count, 1)
+	atomic.AddInt64(&cd.totalDuration, int64(d))
+
+	// Loop to handle the case where another goroutine
+	// concurrently updates the maximum. Loop ends when d is no
+	// longer the maximum or if we successfully update the
+	// maximum.
+	for {
+		currentMax := atomic.LoadInt64(&cd.maxDuration)
+		if d <= time.Duration(currentMax) {
+			break
+		}
+
+		if atomic.CompareAndSwapInt64(&cd.maxDuration, currentMax, int64(d)) {
+			break
+		}
+	}
+}
+
+func (cd *countedDuration) format(prefix string) (string, bool) {
+	if cd.count == 0 {
+		return fmt.Sprintf("%s: 0", prefix), false
+	}
+
+	return fmt.Sprintf(
+		"%s: %d (avg %s; max %s)",
+		prefix,
+		cd.count,
+		time.Duration(cd.totalDuration/cd.count).String(),
+		time.Duration(cd.maxDuration).String(),
+	), true
+}
+
+type countedDurationsByResult map[AttemptResult]*countedDuration
+
+func newCountedDurationsByResult() countedDurationsByResult {
+	return countedDurationsByResult{
+		AttemptSuccess:       &countedDuration{},
+		AttemptTimeout:       &countedDuration{},
+		AttemptGlobalTimeout: &countedDuration{},
+		AttemptCancellation:  &countedDuration{},
+		AttemptError:         &countedDuration{},
+		attemptUnknown:       &countedDuration{},
+	}
+}
+
+func (cdbr countedDurationsByResult) add(result AttemptResult, d time.Duration) {
+	cdbr[result].add(d)
+}
+
+func (cdbr countedDurationsByResult) format(prefix string) ([]string, bool) {
+	s := make([]string, 0, numAttemptResults+1)
+	ForEachAttemptResult(
+		func(r AttemptResult) {
+			if row, nonZero := cdbr[r].format(prefix + r.String()); nonZero {
+				s = append(s, row)
+			}
+		},
+	)
+	if row, nonZero := cdbr[attemptUnknown].format(prefix + attemptUnknown.String()); nonZero {
+		s = append(s, row)
+	}
+
+	return s, len(s) != 0
+}
+
+type diagnosticsData struct {
+	tasksStarted      int64
+	tasksCompleted    countedDurationsByResult
+	attemptsStarted   *countedDuration
+	attemptsCompleted countedDurationsByResult
+	callbacks         *countedDuration
+}
+
+type loggingDiagnosticsCallback struct {
+	logger *log.Logger
+	period time.Duration
+	time   tbntime.Source
+	lock   sync.RWMutex
+	quit   chan struct{}
+	data   *diagnosticsData
+}
+
+func (ldc *loggingDiagnosticsCallback) Close() error {
+	close(ldc.quit)
+	return nil
+}
+
+func (ldc *loggingDiagnosticsCallback) logPeriodically() {
+	timer := ldc.time.NewTimer(ldc.period)
+	for {
+		select {
+		case <-timer.C():
+			ldc.log()
+			timer.Reset(ldc.period)
+		case <-ldc.quit:
+			timer.Stop()
+			return
+		}
+	}
+}
+
+func newDiagnosticsData() *diagnosticsData {
+	return &diagnosticsData{
+		tasksCompleted:    newCountedDurationsByResult(),
+		attemptsStarted:   &countedDuration{},
+		attemptsCompleted: newCountedDurationsByResult(),
+		callbacks:         &countedDuration{},
+	}
+}
+
+func (ldc *loggingDiagnosticsCallback) resetData() *diagnosticsData {
+	var (
+		newData = newDiagnosticsData()
+		oldData *diagnosticsData
+	)
+
+	ldc.lock.Lock()
+	defer ldc.lock.Unlock()
+
+	oldData, ldc.data = ldc.data, newData
+
+	return oldData
+}
+
+func (ldc *loggingDiagnosticsCallback) log() {
+	data := ldc.resetData()
+
+	l := ldc.logger
+	l.Println("Executor Diagnostics")
+	l.Printf("tasks started: %d", data.tasksStarted)
+	if rows, any := data.tasksCompleted.format("tasks completed, "); any {
+		for _, s := range rows {
+			l.Println(s)
+		}
+	}
+	if attemptsStarted, any := data.attemptsStarted.format("attempts started"); any {
+		l.Println(attemptsStarted)
+	}
+	if rows, any := data.attemptsCompleted.format("attempts completed, "); any {
+		for _, s := range rows {
+			l.Println(s)
+		}
+	}
+	if callbacks, any := data.callbacks.format("callbacks"); any {
+		l.Println(callbacks)
+	}
+}
+
+func (ldc *loggingDiagnosticsCallback) TaskStarted(n int) {
+	ldc.lock.RLock()
+	defer ldc.lock.RUnlock()
+
+	atomic.AddInt64(&ldc.data.tasksStarted, int64(n))
+}
+
+func (ldc *loggingDiagnosticsCallback) TaskCompleted(result AttemptResult, d time.Duration) {
+	if !result.Valid() {
+		result = attemptUnknown
+	}
+
+	ldc.lock.RLock()
+	defer ldc.lock.RUnlock()
+
+	ldc.data.tasksCompleted.add(result, d)
+}
+
+func (ldc *loggingDiagnosticsCallback) AttemptStarted(d time.Duration) {
+	ldc.lock.RLock()
+	defer ldc.lock.RUnlock()
+
+	ldc.data.attemptsStarted.add(d)
+}
+
+func (ldc *loggingDiagnosticsCallback) AttemptCompleted(result AttemptResult, d time.Duration) {
+	if !result.Valid() {
+		result = attemptUnknown
+	}
+
+	ldc.lock.RLock()
+	defer ldc.lock.RUnlock()
+
+	ldc.data.attemptsCompleted.add(result, d)
+}
+
+func (ldc *loggingDiagnosticsCallback) CallbackDuration(d time.Duration) {
+	ldc.lock.RLock()
+	defer ldc.lock.RUnlock()
+
+	ldc.data.callbacks.add(d)
+}
+
+var _ io.Closer = &loggingDiagnosticsCallback{}
