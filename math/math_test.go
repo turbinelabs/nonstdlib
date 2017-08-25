@@ -92,3 +92,87 @@ func TestRound(t *testing.T) {
 		)
 	}
 }
+
+func TestSign(t *testing.T) {
+	testCases := []struct {
+		input    float64
+		expected int
+	}{
+		{
+			input:    0.0,
+			expected: 0,
+		},
+		{
+			input:    math.Float64frombits(0x8000000000000000), // negative 0
+			expected: 0,
+		},
+		{
+			input:    math.NaN(),
+			expected: 0,
+		},
+		{
+			input:    math.Inf(1),
+			expected: 1,
+		},
+		{
+			input:    math.Inf(-1),
+			expected: -1,
+		},
+		{
+			input:    math.SmallestNonzeroFloat64,
+			expected: 1,
+		},
+		{
+			input:    -math.SmallestNonzeroFloat64,
+			expected: -1,
+		},
+	}
+
+	for i, tc := range testCases {
+		assert.Group(
+			fmt.Sprintf("test %d of %d", i+1, len(testCases)),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, Sign(tc.input), tc.expected)
+			},
+		)
+	}
+}
+
+func TestSignIn64(t *testing.T) {
+	testCases := []struct {
+		input    int64
+		expected int
+	}{
+		{
+			input:    0,
+			expected: 0,
+		},
+		{
+			input:    math.MaxInt64,
+			expected: 1,
+		},
+		{
+			input:    math.MinInt64,
+			expected: -1,
+		},
+		{
+			input:    1,
+			expected: 1,
+		},
+		{
+			input:    -1,
+			expected: -1,
+		},
+	}
+
+	for i, tc := range testCases {
+		assert.Group(
+			fmt.Sprintf("test %d of %d", i+1, len(testCases)),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, SignInt64(tc.input), tc.expected)
+			},
+		)
+	}
+}

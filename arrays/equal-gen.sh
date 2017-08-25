@@ -1,3 +1,11 @@
+#!/bin/bash
+
+set -e
+
+FILE="$1"
+shift
+
+cat >"$FILE" <<EOF
 /*
 Copyright 2017 Turbine Labs, Inc.
 
@@ -14,9 +22,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package arrays includes several sub-packages allowing type-safe execution
-// of tasks commonly applied to slices.
 package arrays
+EOF
 
-//go:generate ./equal-gen.sh equal.go int int64 float64 string
-//go:generate ./equal-test-gen.sh equal_test.go int int64 float64 string value:"X"
+for TYPE in "$@"; do
+    CAP_TYPE="$(echo "$TYPE" | cut -c1 | tr '[a-z]' '[A-Z]')$(echo "$TYPE" | cut -c2-)"
+    cat >>"$FILE" <<EOF
+
+func Equal${CAP_TYPE}(a, b []${TYPE}) bool {
+	aLen := len(a)
+	if aLen != len(b) {
+		return false
+	}
+
+	if aLen == 0 {
+		return true
+	}
+
+	for i, aVal := range a {
+		if aVal != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+EOF
+done

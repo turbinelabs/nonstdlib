@@ -44,3 +44,31 @@ func Round(f float64) int64 {
 
 	return int64(int)
 }
+
+// Sign returns -1 if f is negative, +1 if f is positive, and 0 if f
+// is positive or negative zero or NaN.
+func Sign(f float64) int {
+	if f < 0.0 {
+		return -1
+	}
+
+	if f > 0.0 {
+		return 1
+	}
+
+	return 0
+}
+
+// SignInt64 returns -1 if f is negative, +1 if f is positive, and 0 if f
+// is 0.
+func SignInt64(i int64) int {
+	if i < 0 {
+		return -1
+	}
+
+	if i > 0 {
+		return 1
+	}
+
+	return 0
+}
