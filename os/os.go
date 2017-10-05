@@ -35,6 +35,7 @@ import (
 // https://golang.org/pkg/os.
 type OS interface {
 	Args() []string
+	Create(name string) (*os.File, error)
 	Getenv(key string) string
 	LookupEnv(key string) (value string, found bool)
 	ExpandEnv(s string) string
@@ -64,6 +65,10 @@ type goOS struct{}
 
 func (x goOS) Args() []string {
 	return os.Args
+}
+
+func (x goOS) Create(name string) (*os.File, error) {
+	return os.Create(name)
 }
 
 func (x goOS) Getenv(key string) string {

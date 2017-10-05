@@ -46,6 +46,19 @@ func (mr *MockOSMockRecorder) Args() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Args", reflect.TypeOf((*MockOS)(nil).Args))
 }
 
+// Create mocks base method
+func (m *MockOS) Create(name string) (*os.File, error) {
+	ret := m.ctrl.Call(m, "Create", name)
+	ret0, _ := ret[0].(*os.File)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Create indicates an expected call of Create
+func (mr *MockOSMockRecorder) Create(name interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOS)(nil).Create), name)
+}
+
 // Getenv mocks base method
 func (m *MockOS) Getenv(key string) string {
 	ret := m.ctrl.Call(m, "Getenv", key)
