@@ -104,6 +104,18 @@ func (mr *MockManagedProcMockRecorder) Kill() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kill", reflect.TypeOf((*MockManagedProc)(nil).Kill))
 }
 
+// Term mocks base method
+func (m *MockManagedProc) Term() error {
+	ret := m.ctrl.Call(m, "Term")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Term indicates an expected call of Term
+func (mr *MockManagedProcMockRecorder) Term() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Term", reflect.TypeOf((*MockManagedProc)(nil).Term))
+}
+
 // Usr1 mocks base method
 func (m *MockManagedProc) Usr1() error {
 	ret := m.ctrl.Call(m, "Usr1")

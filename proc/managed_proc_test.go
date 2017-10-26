@@ -125,6 +125,16 @@ func TestManagedProcHangup(t *testing.T) {
 	assert.True(t, test.output.checkSignaled())
 }
 
+func TestManagedProcTerm(t *testing.T) {
+	test := makeManagedProcTest(t)
+
+	assert.Nil(t, test.proc.Term())
+
+	test.wg.Wait()
+	assert.False(t, test.proc.Running())
+	assert.True(t, test.output.checkSignaled())
+}
+
 func TestManagedProcUsr1(t *testing.T) {
 	test := makeManagedProcTest(t)
 

@@ -51,7 +51,7 @@ func main() {
 	}
 
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGUSR1)
+	signal.Notify(signals, syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGUSR1)
 
 	fmt.Println(ready)
 	timeout := time.After(time.Duration(delay) * time.Second)

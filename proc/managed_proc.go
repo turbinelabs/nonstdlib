@@ -47,6 +47,10 @@ type ManagedProc interface {
 	// terminated, no error is returned.
 	Kill() error
 
+	// Sends SIGTERM to the process. If the process has already
+	// terminated, no error is returned.
+	Term() error
+
 	// Sends SIGUSR1 to the process. If the process has already
 	// terminated, no error is returned.
 	Usr1() error
@@ -109,6 +113,14 @@ func (p *managedProc) Completed() bool {
 func (p *managedProc) Hangup() error {
 	if p.Process != nil {
 		return p.Process.Signal(syscall.SIGHUP)
+	}
+
+	return errors.New("process not available")
+}
+
+func (p *managedProc) Term() error {
+	if p.Process != nil {
+		return p.Process.Signal(syscall.SIGTERM)
 	}
 
 	return errors.New("process not available")
