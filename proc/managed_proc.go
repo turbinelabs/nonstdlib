@@ -26,6 +26,12 @@ import (
 
 // ManagedProc models a process under management.
 type ManagedProc interface {
+	// Path returns the path of the command to be run.
+	Path() string
+
+	// Args returns a copy of the arguments of the command to be run.
+	Args() []string
+
 	// Start the process.
 	Start() error
 
@@ -84,6 +90,16 @@ func NewManagedProc(
 	onExit func(error),
 ) ManagedProc {
 	return &managedProc{LoggingCmd: LoggingCommand(logger, exe, args...), onExit: onExit}
+}
+
+func (p *managedProc) Path() string {
+	return p.LoggingCmd.Path
+}
+
+func (p *managedProc) Args() []string {
+	args := make([]string, len(p.LoggingCmd.Args))
+	copy(args, p.LoggingCmd.Args)
+	return args
 }
 
 func (p *managedProc) Start() error {

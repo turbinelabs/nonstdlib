@@ -32,6 +32,30 @@ func (m *MockManagedProc) EXPECT() *MockManagedProcMockRecorder {
 	return m.recorder
 }
 
+// Path mocks base method
+func (m *MockManagedProc) Path() string {
+	ret := m.ctrl.Call(m, "Path")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Path indicates an expected call of Path
+func (mr *MockManagedProcMockRecorder) Path() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Path", reflect.TypeOf((*MockManagedProc)(nil).Path))
+}
+
+// Args mocks base method
+func (m *MockManagedProc) Args() []string {
+	ret := m.ctrl.Call(m, "Args")
+	ret0, _ := ret[0].([]string)
+	return ret0
+}
+
+// Args indicates an expected call of Args
+func (mr *MockManagedProcMockRecorder) Args() *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Args", reflect.TypeOf((*MockManagedProc)(nil).Args))
+}
+
 // Start mocks base method
 func (m *MockManagedProc) Start() error {
 	ret := m.ctrl.Call(m, "Start")

@@ -18,6 +18,7 @@ package proc
 
 import (
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -53,6 +54,7 @@ func makeManagedProcTest(t *testing.T) *managedProcTest {
 	logger, procTestOutput := makeProcTestOutput()
 
 	proc := NewManagedProc(testExe, testArgs, logger, onExit)
+
 	err := proc.Start()
 	assert.Nil(t, err)
 	assert.NonNil(t, proc)
@@ -62,8 +64,13 @@ func makeManagedProcTest(t *testing.T) *managedProcTest {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	procArgs := proc.(*managedProc).Args
+	assert.True(t, strings.HasSuffix(proc.Path(), "/"+testExe))
+
+	procArgs := proc.(*managedProc).LoggingCmd.Args
 	assert.ArrayEqual(t, procArgs, expectedCmdArgs)
+	copiedProcArgs := proc.Args()
+	assert.ArrayEqual(t, copiedProcArgs, expectedCmdArgs)
+	assert.NotSameInstance(t, copiedProcArgs, procArgs)
 
 	test.proc = proc
 	test.output = procTestOutput
