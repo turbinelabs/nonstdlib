@@ -38,7 +38,7 @@ type flagSet struct {
 }
 
 func (fs *flagSet) Scope(prefix, description string) FlagSet {
-	return newPrefixedFlagSet(fs.FlagSet, prefix, description)
+	return newPrefixedFlagSet(fs, prefix, description)
 }
 
 func (fs *flagSet) GetScope() string {
@@ -49,7 +49,18 @@ func (fs *flagSet) Unwrap() *flag.FlagSet {
 	return fs.FlagSet
 }
 
-// FlagSet represents an optionally scoped *flag.FlagSet for tests. It
+func (fs *flagSet) HostPortVar(hp *HostPort, name string, value HostPort, usage string) {
+	*hp = value
+	fs.Var(hp, name, usage)
+}
+
+func (fs *flagSet) HostPort(name string, value HostPort, usage string) *HostPort {
+	hp := &HostPort{}
+	fs.HostPortVar(hp, name, value, usage)
+	return hp
+}
+
+// TestFlagSet represents an optionally scoped FlagSet for tests. It
 // differs from FlagSet only in that methods not normally needed by
 // consumers of FlagSet are directly available.
 type TestFlagSet interface {

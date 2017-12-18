@@ -36,6 +36,12 @@ var (
 	tsNanos   = time.Unix(1474406514, 572000000).UTC()
 )
 
+func TestNewTimestamp(t *testing.T) {
+	now := time.Now()
+	ts := NewTimestamp(now)
+	assert.Equal(t, ts.Value, now)
+}
+
 func TestTimestampSetHandlesNow(t *testing.T) {
 	ts := Timestamp{tsNanos}
 

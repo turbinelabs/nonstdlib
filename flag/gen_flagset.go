@@ -44,6 +44,18 @@ type FlagSet interface {
 	// flag.FlagSet.Var for more information.
 	Var(value flag.Value, name string, usage string)
 
+	// HostPortVar defines a HostPort flag with the specified name,
+	// default value, and usage string. The argument hp points to a
+	// HostPort variable in which to store the value of the flag.
+	// The flag accepts "host:port" strings.
+	HostPortVar(hp *HostPort, name string, value HostPort, usage string)
+
+	// HostPort defines a HostPort flag with the specified name,
+	// default value, and usage string. The return value is the
+	// address of a HostPort variable that stores the value of the
+	// flag. The flag accepts "host:port" strings.
+	HostPort(name string, value HostPort, usage string) *HostPort
+
 	// BoolVar defines a bool flag with the specified name,
 	// default value, and usage. The flag's value is stored in p.
 	BoolVar(p *bool, name string, value bool, usage string)

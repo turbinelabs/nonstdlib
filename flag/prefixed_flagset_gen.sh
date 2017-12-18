@@ -81,6 +81,18 @@ type FlagSet interface {
 	// flag's type and value are derived from value. See
 	// flag.FlagSet.Var for more information.
 	Var(value flag.Value, name string, usage string)
+
+	// HostPortVar defines a HostPort flag with the specified name,
+	// default value, and usage string. The argument hp points to a
+	// HostPort variable in which to store the value of the flag.
+	// The flag accepts "host:port" strings.
+	HostPortVar(hp *HostPort, name string, value HostPort, usage string)
+
+	// HostPort defines a HostPort flag with the specified name,
+	// default value, and usage string. The return value is the
+	// address of a HostPort variable that stores the value of the
+	// flag. The flag accepts "host:port" strings.
+	HostPort(name string, value HostPort, usage string) *HostPort
 EOF
 
 cat >$TEST_FILE <<EOF

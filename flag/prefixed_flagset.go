@@ -26,17 +26,17 @@ import (
 // prefixedFlagSet extends a flag.FlagSet to allow arbitrary-depth scoping
 // of flags, using "." as a delemiter.
 type prefixedFlagSet struct {
-	*flag.FlagSet
+	FlagSet
 
 	prefix     string
 	descriptor string
 }
 
 // newPrefixedFlagSet produces a new prefixedFlagSet with the given
-// *flag.FlagSet, prefix and descriptor. The descriptor is included
-// will be used to replace the string "{{NAME}}" in usage strings
-// used when declaring Flags.
-func newPrefixedFlagSet(fs *flag.FlagSet, prefix, descriptor string) *prefixedFlagSet {
+// FlagSet, prefix and descriptor. The descriptor is included will be
+// used to replace the string "{{NAME}}" in usage strings used when
+// declaring Flags.
+func newPrefixedFlagSet(fs FlagSet, prefix, descriptor string) *prefixedFlagSet {
 	if prefix != "" && !strings.HasSuffix(prefix, ".") {
 		prefix = prefix + "."
 	}
@@ -58,6 +58,14 @@ func (f *prefixedFlagSet) Var(value flag.Value, name string, usage string) {
 	f.FlagSet.Var(value, f.prefix+name, f.mkUsage(usage))
 }
 
+func (f *prefixedFlagSet) HostPortVar(hp *HostPort, name string, value HostPort, usage string) {
+	f.FlagSet.HostPortVar(hp, f.prefix+name, value, f.mkUsage(usage))
+}
+
+func (f *prefixedFlagSet) HostPort(name string, value HostPort, usage string) *HostPort {
+	return f.FlagSet.HostPort(f.prefix+name, value, f.mkUsage(usage))
+}
+
 // Scope scopes the target prefixedFlagSet to produce a new FlagSet,
 // with the given scope an descriptor.
 func (f *prefixedFlagSet) Scope(prefix, descriptor string) FlagSet {
@@ -72,5 +80,5 @@ func (f *prefixedFlagSet) GetScope() string {
 }
 
 func (f *prefixedFlagSet) Unwrap() *flag.FlagSet {
-	return f.FlagSet
+	return f.FlagSet.Unwrap()
 }

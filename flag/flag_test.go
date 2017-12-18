@@ -56,6 +56,8 @@ func TestEnumerate(t *testing.T) {
 }
 
 func TestIsSet(t *testing.T) {
+	assert.False(t, IsSet(nil, "anything"))
+
 	fs, _, _, _ := testFlags()
 	assert.False(t, IsSet(fs, "foo-baz"))
 	assert.False(t, IsSet(fs, "bar"))

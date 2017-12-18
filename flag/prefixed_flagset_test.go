@@ -56,7 +56,7 @@ var _ flag.Value = &stringValue{}
 func (tc *prefixedFlagTestCase) run(t testing.TB) {
 	fs := flag.NewFlagSet("generated code: "+tc.name, flag.PanicOnError)
 
-	pfs := newPrefixedFlagSet(fs, "theprefix", "the-app-name")
+	pfs := newPrefixedFlagSet(Wrap(fs), "theprefix", "the-app-name")
 
 	target := tc.addFlag(pfs)
 
@@ -104,7 +104,7 @@ func (tc *prefixedFlagTestCase) run(t testing.TB) {
 
 	flagName := "theprefix." + tc.name
 
-	pfs.Parse([]string{
+	fs.Parse([]string{
 		"-" + flagName + "=" + value,
 	})
 
@@ -115,7 +115,7 @@ func (tc *prefixedFlagTestCase) run(t testing.TB) {
 		assert.DeepEqual(t, target, expectedValue)
 	}
 
-	f := pfs.Lookup(flagName)
+	f := fs.Lookup(flagName)
 	assert.NonNil(t, f)
 	assert.Equal(t, f.Name, flagName)
 	assert.Equal(t, f.Usage, fmt.Sprintf(flagUsageFmt, "the-app-name", "theprefix."))
@@ -142,9 +142,44 @@ func TestVar(t *testing.T) {
 	testCase.run(t)
 }
 
+func TestHostPortVar(t *testing.T) {
+	fs := NewTestFlagSet()
+
+	pfs := fs.Scope("theprefix", "the-app-name")
+
+	hp := NewHostPort("default:80")
+	pfs.HostPortVar(&hp, "hostport", hp, flagUsage)
+
+	fs.Parse([]string{"-theprefix.hostport=example.com:443"})
+
+	assert.Equal(t, hp.Addr(), "example.com:443")
+
+	f := fs.Unwrap().Lookup("theprefix.hostport")
+	assert.NonNil(t, f)
+	assert.Equal(t, f.Name, "theprefix.hostport")
+	assert.Equal(t, f.Usage, fmt.Sprintf(flagUsageFmt, "the-app-name", "theprefix."))
+}
+
+func TestHostPort(t *testing.T) {
+	fs := NewTestFlagSet()
+
+	pfs := fs.Scope("theprefix", "the-app-name")
+
+	hp := pfs.HostPort("hostport", NewHostPort("default:80"), flagUsage)
+
+	fs.Parse([]string{"-theprefix.hostport=example.com:443"})
+
+	assert.Equal(t, hp.Addr(), "example.com:443")
+
+	f := fs.Unwrap().Lookup("theprefix.hostport")
+	assert.NonNil(t, f)
+	assert.Equal(t, f.Name, "theprefix.hostport")
+	assert.Equal(t, f.Usage, fmt.Sprintf(flagUsageFmt, "the-app-name", "theprefix."))
+}
+
 func TestScope(t *testing.T) {
 	fs := flag.NewFlagSet("scoping test", flag.PanicOnError)
-	underlying := newPrefixedFlagSet(fs, "theprefix", "the-app-name")
+	underlying := newPrefixedFlagSet(Wrap(fs), "theprefix", "the-app-name")
 	pfs := underlying.Scope("scope", "scope-name")
 	assert.SameInstance(t, pfs.Unwrap(), fs)
 	pfsImpl := pfs.(*prefixedFlagSet)

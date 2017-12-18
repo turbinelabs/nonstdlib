@@ -112,14 +112,6 @@ func (fe fromEnv) Filled() map[string]string {
 	return fe.filledFromEnv
 }
 
-func (fe fromEnv) AllKeys() []string {
-	keys := []string{}
-	fe.fs.VisitAll(func(f *flag.Flag) {
-		keys = append(keys, EnvKey(fe.prefix, f.Name))
-	})
-	return keys
-}
-
 func (fe fromEnv) AllFlags() []*flag.Flag {
 	return Enumerate(fe.fs)
 }
