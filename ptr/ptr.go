@@ -408,3 +408,17 @@ func TimeValueMap(src map[string]*time.Time) map[string]time.Time {
 	}
 	return dst
 }
+
+// Duration returns a pointer to the time.Duration value passed in.
+func Duration(v time.Duration) *time.Duration {
+	return &v
+}
+
+// DurationValue returns the value of the time.Duration pointer passed in or
+// 0 if the pointer is nil.
+func DurationValue(v *time.Duration) time.Duration {
+	if v != nil {
+		return *v
+	}
+	return 0
+}
