@@ -73,9 +73,9 @@ type managedProc struct {
 }
 
 // NewDefaultManagedProc constructs a new ManagedProc using
-// DefaultLoggingCommand. Invokes onExit when the process stops
-// running. If the process cannot be started, an error is returned. In
-// this case onExit is not invoked.
+// DefaultLoggingCommand. Invokes onExit (if non-nil) when the process
+// stops running. If the process cannot be started, an error is
+// returned. In this case onExit is not invoked.
 func NewDefaultManagedProc(exe string, args []string, onExit func(error)) ManagedProc {
 	return &managedProc{LoggingCmd: DefaultLoggingCommand(exe, args...), onExit: onExit}
 }
@@ -110,7 +110,9 @@ func (p *managedProc) Start() error {
 	go func() {
 		err := p.Wait()
 		p.running = false
-		p.onExit(err)
+		if p.onExit != nil {
+			p.onExit(err)
+		}
 	}()
 
 	p.running = true

@@ -178,3 +178,11 @@ func TestManagedProcFailure(t *testing.T) {
 	assert.NonNil(t, err)
 	assert.False(t, called)
 }
+
+func TestManagedProcNoOnExitCallback(t *testing.T) {
+	p := NewDefaultManagedProc("false", []string{}, nil)
+	assert.Nil(t, p.Start())
+	for p.Running() {
+		time.Sleep(10 * time.Millisecond)
+	}
+}
