@@ -16,7 +16,9 @@ limitations under the License.
 
 package flag
 
-//go:generate ./prefixed_flagset_gen.sh bool time.Duration float64 int int64 string uint uint64
+//go:generate codegen --output=gen_prefixed_flagset.go --source=$GOFILE prefixed_flagset.template types[]=bool,time.Duration,float64,int,int64,string,uint,uint64
+//go:generate codegen --output=gen_prefixed_flagset_test.go --source=$GOFILE prefixed_flagset_test.template types[]=bool,time.Duration,float64,int,int64,string,uint,uint64
+//go:generate codegen --output=gen_flagset.go --source=$GOFILE flagset.template types[]=bool,time.Duration,float64,int,int64,string,uint,uint64
 
 import (
 	"flag"

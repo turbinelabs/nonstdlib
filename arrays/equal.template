@@ -1,11 +1,3 @@
-#!/bin/bash
-
-set -e
-
-FILE="$1"
-shift
-
-cat >"$FILE" <<EOF
 /*
 Copyright 2017 Turbine Labs, Inc.
 
@@ -23,13 +15,8 @@ limitations under the License.
 */
 
 package arrays
-EOF
-
-for TYPE in "$@"; do
-    CAP_TYPE="$(echo "$TYPE" | cut -c1 | tr '[a-z]' '[A-Z]')$(echo "$TYPE" | cut -c2-)"
-    cat >>"$FILE" <<EOF
-
-func Equal${CAP_TYPE}(a, b []${TYPE}) bool {
+{{range .types}}
+func Equal{{.Capitalize}}(a, b []{{.Type}}) bool {
 	aLen := len(a)
 	if aLen != len(b) {
 		return false
@@ -47,5 +34,4 @@ func Equal${CAP_TYPE}(a, b []${TYPE}) bool {
 
 	return true
 }
-EOF
-done
+{{end -}}

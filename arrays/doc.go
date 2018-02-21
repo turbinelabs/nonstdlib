@@ -18,5 +18,5 @@ limitations under the License.
 // of tasks commonly applied to slices.
 package arrays
 
-//go:generate ./equal-gen.sh equal.go int int64 float64 string
-//go:generate ./equal-test-gen.sh equal_test.go int int64 float64 string value:"X"
+//go:generate codegen --output=equal.go --source=$GOFILE equal.template types[]=int,int64,float64,string
+//go:generate codegen --output=equal_test.go --source=$GOFILE equal_test.template types[]=int,int64,float64,string
