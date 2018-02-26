@@ -18,7 +18,6 @@ package proc
 
 import (
 	"os/exec"
-	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -64,7 +63,7 @@ func makeManagedProcTest(t *testing.T) *managedProcTest {
 		time.Sleep(10 * time.Millisecond)
 	}
 
-	assert.True(t, strings.HasSuffix(proc.Path(), "/"+testExe))
+	assert.HasSuffix(t, proc.Path(), "/"+testExe)
 
 	procArgs := proc.(*managedProc).LoggingCmd.Args
 	assert.ArrayEqual(t, procArgs, expectedCmdArgs)

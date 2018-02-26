@@ -17,7 +17,6 @@ limitations under the License.
 package proc
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -85,7 +84,7 @@ func TestLoggingCmdKill(t *testing.T) {
 
 	// expect no further output since kill cannot be trapped
 	assert.False(t, output.checkCompleted())
-	assert.True(t, strings.HasSuffix(output.String(), "READY\n"))
+	assert.HasSuffix(t, output.String(), "READY\n")
 }
 
 func TestLoggingCmdQuit(t *testing.T) {
