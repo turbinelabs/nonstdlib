@@ -51,12 +51,7 @@ func TestLogWriterWrite(t *testing.T) {
 	logWriter, output := makeLogWriter("WRITE ")
 
 	logWriter.Write([]byte("xyz"))
-	select {
-	case s := <-output:
-		assert.Failed(t, fmt.Sprintf("expected no output, got %q", s))
-	default:
-		// ok
-	}
+	assert.ChannelEmpty(t, output)
 
 	logWriter.Write([]byte("pdq\n"))
 	assert.Equal(t, <-output, "WRITE xyzpdq\n")

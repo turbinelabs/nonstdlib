@@ -300,10 +300,5 @@ func testExecStopsWithInFlightRetries(t *testing.T, mk mkExecutor) {
 	wg.Wait()
 	e.Stop()
 
-	select {
-	case <-c:
-		assert.Failed(t, "unexpected invocation of pending retry's callback")
-	default:
-		// expected nothing
-	}
+	assert.ChannelEmpty(t, c)
 }

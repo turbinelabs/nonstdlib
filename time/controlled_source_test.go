@@ -82,30 +82,21 @@ func TestControlledSourceAfterFunc(t *testing.T) {
 		}
 	}
 
-	expectNoCall := func() {
-		select {
-		case tm := <-calls:
-			assert.Tracing(t).Errorf("unexpected call: %s", tm)
-		default:
-			// ok
-		}
-	}
-
 	timer := source.AfterFunc(1*time.Second, func() { calls <- source.Now() })
 
 	source.Advance(999 * time.Millisecond)
-	expectNoCall()
+	assert.ChannelEmpty(t, calls)
 
 	source.Advance(1 * time.Millisecond)
 	expectCall(original.Add(1 * time.Second))
 
 	source.Advance(1 * time.Second)
-	expectNoCall()
+	assert.ChannelEmpty(t, calls)
 
 	timer = source.AfterFunc(1*time.Second, func() { calls <- source.Now() })
 	timer.Stop()
 	source.Advance(2 * time.Second)
-	expectNoCall()
+	assert.ChannelEmpty(t, calls)
 
 	source.AfterFunc(0*time.Second, func() { calls <- source.Now() })
 	expectCall(original.Add(4 * time.Second))

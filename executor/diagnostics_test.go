@@ -86,9 +86,7 @@ func TestCountedDurationMultiThreaded(t *testing.T) {
 	go func() {
 		defer waitGroup.Done()
 
-		select {
-		case <-start:
-		}
+		<-start
 
 		for i := 0; i < 1000; i++ {
 			cd.add(time.Second)
@@ -101,9 +99,7 @@ func TestCountedDurationMultiThreaded(t *testing.T) {
 	go func() {
 		defer waitGroup.Done()
 
-		select {
-		case <-start:
-		}
+		<-start
 
 		for i := 0; i < 2000; i++ {
 			cd.add(time.Duration(i*50) * time.Millisecond)
@@ -113,9 +109,7 @@ func TestCountedDurationMultiThreaded(t *testing.T) {
 	go func() {
 		defer waitGroup.Done()
 
-		select {
-		case <-start:
-		}
+		<-start
 
 		for i := 0; i < 2000; i++ {
 			cd.add(time.Duration(i*50) * time.Millisecond)
