@@ -7,7 +7,7 @@ package os
 import (
 	gomock "github.com/golang/mock/gomock"
 	io "io"
-	os "os"
+	os0 "os"
 	reflect "reflect"
 )
 
@@ -47,9 +47,9 @@ func (mr *MockOSMockRecorder) Args() *gomock.Call {
 }
 
 // Create mocks base method
-func (m *MockOS) Create(name string) (*os.File, error) {
+func (m *MockOS) Create(name string) (*os0.File, error) {
 	ret := m.ctrl.Call(m, "Create", name)
-	ret0, _ := ret[0].(*os.File)
+	ret0, _ := ret[0].(*os0.File)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -155,9 +155,9 @@ func (mr *MockOSMockRecorder) Stderr() *gomock.Call {
 }
 
 // Stat mocks base method
-func (m *MockOS) Stat(name string) (os.FileInfo, error) {
+func (m *MockOS) Stat(name string) (os0.FileInfo, error) {
 	ret := m.ctrl.Call(m, "Stat", name)
-	ret0, _ := ret[0].(os.FileInfo)
+	ret0, _ := ret[0].(os0.FileInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -204,9 +204,9 @@ func (mr *MockOSMockRecorder) Rename(oldpath, newpath interface{}) *gomock.Call 
 }
 
 // Open mocks base method
-func (m *MockOS) Open(name string) (*os.File, error) {
+func (m *MockOS) Open(name string) (*os0.File, error) {
 	ret := m.ctrl.Call(m, "Open", name)
-	ret0, _ := ret[0].(*os.File)
+	ret0, _ := ret[0].(*os0.File)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -217,9 +217,9 @@ func (mr *MockOSMockRecorder) Open(name interface{}) *gomock.Call {
 }
 
 // OpenFile mocks base method
-func (m *MockOS) OpenFile(name string, flag int, perm os.FileMode) (*os.File, error) {
+func (m *MockOS) OpenFile(name string, flag int, perm os0.FileMode) (*os0.File, error) {
 	ret := m.ctrl.Call(m, "OpenFile", name, flag, perm)
-	ret0, _ := ret[0].(*os.File)
+	ret0, _ := ret[0].(*os0.File)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -230,7 +230,7 @@ func (mr *MockOSMockRecorder) OpenFile(name, flag, perm interface{}) *gomock.Cal
 }
 
 // MkdirAll mocks base method
-func (m *MockOS) MkdirAll(path string, perm os.FileMode) error {
+func (m *MockOS) MkdirAll(path string, perm os0.FileMode) error {
 	ret := m.ctrl.Call(m, "MkdirAll", path, perm)
 	ret0, _ := ret[0].(error)
 	return ret0
