@@ -59,22 +59,6 @@ func WithParallelism(parallelism int) Option {
 	}
 }
 
-// WithMaxQueueDepth sets the maximum number of actions pending
-// immediate execution. If all worker goroutines are processing
-// actions, the number of items that can be pending execution (initial
-// or retry) before blocking occurs.
-func WithMaxQueueDepth(maxQueueDepth int) Option {
-	if maxQueueDepth < 1 {
-		maxQueueDepth = 1
-	}
-
-	return func(e *commonExec) {
-		if r, ok := e.impl.(*retryingExecImpl); ok {
-			r.maxQueueDepth = maxQueueDepth
-		}
-	}
-}
-
 // WithTimeout sets the timeout for completion of actions. If the
 // action has not completed (including retries) within the given
 // duration, it is canceled. Timeouts less than or equal to zero are

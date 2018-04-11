@@ -29,12 +29,38 @@ const (
 	globalTimeoutError
 )
 
+const (
+	defaultMaxAttempts   = 1
+	defaultMaxQueueDepth = 10
+	defaultParallelism   = 1
+)
+
+var (
+	defaultDelayFunc = NewConstantDelayFunc(1 * time.Second)
+)
+
+// retry encapsulates a nextAttempt (when to retry the action), the
+// data necessary to perform the retry, and how many attempts have
+// already been made.
+type retry struct {
+	f           Func
+	cb          CallbackFunc
+	start       time.Time
+	nextAttempt time.Time
+	ctxt        context.Context
+	ctxtCancel  context.CancelFunc
+	attempts    int
+}
+
+// execImpl defines the underlying low-level interface for an Executor. commonExec
+// implements Executor in terms of these functions.
 type execImpl interface {
 	add(*commonExec, *retry)
 	retry(*commonExec, time.Duration, *retry) bool
 	stop(*commonExec)
 }
 
+// commonExec is an implementation of Executor that delegates to execImpl.
 type commonExec struct {
 	impl execImpl
 

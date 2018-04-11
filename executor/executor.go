@@ -72,3 +72,7 @@ type Executor interface {
 	// NewRetryingExecutor and NewGoroutineExecutor.
 	SetDiagnosticsCallback(DiagnosticsCallback)
 }
+
+// NewExecutor constructs a new Executor. The current default
+// executor uses goroutines. See NewGoroutineExecutor.
+func NewExecutor(options ...Option) Executor { return NewGoroutineExecutor(options...) }

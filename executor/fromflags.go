@@ -39,7 +39,6 @@ const (
 	ExponentialDelayType DelayType = "exponential"
 
 	flagDefaultDelayType      = ExponentialDelayType
-	flagDefaultLegacy         = false
 	flagDefaultInitialDelay   = 100 * time.Millisecond
 	flagDefaultMaxDelay       = 30 * time.Second
 	flagDefaultMaxAttempts    = 8
@@ -60,12 +59,10 @@ type FromFlags interface {
 // flags. Values are ignored if they are the zero value for their
 // type.
 type FromFlagsDefaults struct {
-	Legacy         bool
 	DelayType      DelayType
 	InitialDelay   time.Duration
 	MaxDelay       time.Duration
 	MaxAttempts    int
-	MaxQueueDepth  int
 	Parallelism    int
 	Timeout        time.Duration
 	AttemptTimeout time.Duration
@@ -97,13 +94,6 @@ func NewFromFlagsWithDefaults(
 		"Specifies the retry delay type.",
 	)
 
-	f.BoolVar(
-		&ff.legacy,
-		"legacy",
-		defaults.DefaultLegacy(),
-		"Enables the legacy queue-based executor.",
-	)
-
 	f.DurationVar(
 		&ff.initialDelay,
 		"delay",
@@ -125,14 +115,6 @@ func NewFromFlagsWithDefaults(
 		"max-attempts",
 		defaults.DefaultMaxAttempts(),
 		"Specifies the maximum number of attempts made, inclusive of the original attempt.",
-	)
-
-	f.IntVar(
-		&ff.maxQueueDepth,
-		"max-queue",
-		defaults.DefaultMaxQueueDepth(),
-		"Specifies the maximum number of attempts that may be queued before new "+
-			"attempts are blocked.",
 	)
 
 	f.IntVar(
@@ -169,12 +151,6 @@ func (defaults FromFlagsDefaults) DefaultDelayType() DelayType {
 	return flagDefaultDelayType
 }
 
-// DefaultLegacy returns the legacy setting. If not overridden the
-// default is false.
-func (defaults FromFlagsDefaults) DefaultLegacy() bool {
-	return defaults.Legacy
-}
-
 // DefaultInitialDelay returns the default initial delay. If not
 // overridden, the default initial delay is 100 milliseconds.
 func (defaults FromFlagsDefaults) DefaultInitialDelay() time.Duration {
@@ -201,17 +177,6 @@ func (defaults FromFlagsDefaults) DefaultMaxAttempts() int {
 	}
 
 	return flagDefaultMaxAttempts
-}
-
-// DefaultMaxQueueDepth returns the default maximum queue depth. If
-// not overridden, the default max queue depth is 20 times the number
-// of system CPU cores.
-func (defaults FromFlagsDefaults) DefaultMaxQueueDepth() int {
-	if defaults.MaxQueueDepth != 0 {
-		return defaults.MaxQueueDepth
-	}
-
-	return runtime.NumCPU() * 20
 }
 
 // DefaultParallelism returns the default parallelism. If not
@@ -248,11 +213,9 @@ func (defaults FromFlagsDefaults) DefaultAttemptTimeout() time.Duration {
 
 type fromFlags struct {
 	delayType      tbnflag.Choice
-	legacy         bool
 	initialDelay   time.Duration
 	maxDelay       time.Duration
 	maxAttempts    int
-	maxQueueDepth  int
 	parallelism    int
 	timeout        time.Duration
 	attemptTimeout time.Duration
@@ -273,18 +236,13 @@ func (ff *fromFlags) Make(log *log.Logger) Executor {
 		options := []Option{
 			WithRetryDelayFunc(delayFunc),
 			WithMaxAttempts(ff.maxAttempts),
-			WithMaxQueueDepth(ff.maxQueueDepth),
 			WithParallelism(ff.parallelism),
 			WithTimeout(ff.timeout),
 			WithAttemptTimeout(ff.attemptTimeout),
 			WithLogger(log),
 		}
 
-		if ff.legacy {
-			ff.executor = NewRetryingExecutor(options...)
-		} else {
-			ff.executor = NewGoroutineExecutor(options...)
-		}
+		ff.executor = NewGoroutineExecutor(options...)
 	}
 
 	return ff.executor

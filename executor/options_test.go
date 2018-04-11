@@ -74,22 +74,6 @@ func TestWithParallelism(t *testing.T) {
 	assert.Equal(t, exec.parallelism, 1)
 }
 
-func TestWithMaxQueueDepth(t *testing.T) {
-	execImpl := &retryingExecImpl{}
-	exec := &commonExec{
-		impl: execImpl,
-	}
-
-	WithMaxQueueDepth(0)(exec)
-	assert.Equal(t, execImpl.maxQueueDepth, 1)
-
-	WithMaxQueueDepth(100)(exec)
-	assert.Equal(t, execImpl.maxQueueDepth, 100)
-
-	WithMaxQueueDepth(-100)(exec)
-	assert.Equal(t, execImpl.maxQueueDepth, 1)
-}
-
 func TestWithTimeout(t *testing.T) {
 	exec := &commonExec{}
 
