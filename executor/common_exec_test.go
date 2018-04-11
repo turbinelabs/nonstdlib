@@ -87,7 +87,6 @@ func testRetriesWithNoCallback(t *testing.T, mk mkExecutor) {
 	assert.HasSameElements(t, messages[0:3], []string{"p1 fail", "p2 ok", "p3 fail"})
 	assert.HasSameElements(t, messages[3:5], []string{"p1 ok", "p3 fail"})
 	assert.HasSameElements(t, messages[5:6], []string{"p3 fail"})
-
 }
 
 func testEarlierNextRetry(t *testing.T, mk mkExecutor) {

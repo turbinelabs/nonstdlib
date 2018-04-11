@@ -3,192 +3,254 @@ package executor
 import (
 	"context"
 	"errors"
-	"sync"
+	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	tbntime "github.com/turbinelabs/nonstdlib/time"
 	"github.com/turbinelabs/test/assert"
 )
 
+type unit struct{}
+
 type testDiag struct {
-	sync.Mutex
+	taskStarts  chan unit
+	taskResults chan AttemptResult
 
-	taskCompletedCh chan struct{}
+	attemptStarts  chan unit
+	attemptResults chan AttemptResult
 
-	tasksStarted int
-	taskResults  []AttemptResult
-
-	attemptsStarted int
-	attemptResults  []AttemptResult
-
-	callbacks int
+	callbacks int32
 }
 
-func (t *testDiag) awaitTasks(n int) {
-	for t.numCompleted() < n {
-		t.awaitTask()
+func newTestDiag(expectedTasks, expectedAttempts int) *testDiag {
+	return &testDiag{
+		taskStarts:     make(chan unit, expectedTasks*2),
+		taskResults:    make(chan AttemptResult, expectedTasks*2),
+		attemptStarts:  make(chan unit, expectedAttempts*2),
+		attemptResults: make(chan AttemptResult, expectedAttempts*2),
 	}
 }
 
-func (t *testDiag) numCompleted() int {
-	t.Lock()
-	defer t.Unlock()
-
-	return len(t.taskResults)
+func (t *testDiag) countPendingTaskStarts() int {
+	i := 0
+	for {
+		select {
+		case <-t.taskStarts:
+			i++
+		default:
+			return i
+		}
+	}
 }
 
-func (t *testDiag) awaitTask() {
-	timer := time.NewTimer(10 * time.Millisecond)
-	defer timer.Stop()
-
-	select {
-	case <-t.taskCompletedCh:
-	case <-timer.C:
+func (t *testDiag) countPendingAttemptStarts() int {
+	i := 0
+	for {
+		select {
+		case <-t.attemptStarts:
+			i++
+		default:
+			return i
+		}
 	}
 }
 
 func (t *testDiag) TaskStarted(i int) {
-	t.Lock()
-	defer t.Unlock()
-
-	t.tasksStarted++
+	for i > 0 {
+		select {
+		case t.taskStarts <- unit{}:
+		default:
+			panic("taskStarts channel full")
+		}
+		i--
+	}
 }
 
 func (t *testDiag) TaskCompleted(r AttemptResult, _ time.Duration) {
-	t.Lock()
-	defer t.Unlock()
-
-	t.taskResults = append(t.taskResults, r)
-
 	select {
-	case t.taskCompletedCh <- struct{}{}:
+	case t.taskResults <- r:
 	default:
+		panic("taskResults channel full")
 	}
 }
 
 func (t *testDiag) AttemptStarted(_ time.Duration) {
-	t.Lock()
-	defer t.Unlock()
-
-	t.attemptsStarted++
-}
-
-func (t *testDiag) AttemptCompleted(r AttemptResult, _ time.Duration) {
-	t.Lock()
-	defer t.Unlock()
-
-	t.attemptResults = append(t.attemptResults, r)
-}
-
-func (t *testDiag) CallbackDuration(_ time.Duration) {
-	t.Lock()
-	defer t.Unlock()
-
-	t.callbacks++
-}
-
-func newTestDiag() *testDiag {
-	return &testDiag{
-		taskCompletedCh: make(chan struct{}, 1),
+	select {
+	case t.attemptStarts <- unit{}:
+	default:
+		panic("attemptStarts channel full")
 	}
 }
 
+func (t *testDiag) AttemptCompleted(r AttemptResult, _ time.Duration) {
+	select {
+	case t.attemptResults <- r:
+	default:
+		panic("attemptResults channel full")
+	}
+}
+
+func (t *testDiag) CallbackDuration(_ time.Duration) {
+	atomic.AddInt32(&t.callbacks, 1)
+}
+
 func testExecTaskDiagnostics(t *testing.T, mk mkExecutor) {
-	diag := &testDiag{}
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		diag := newTestDiag(3, 3)
 
-	e := mk(
-		WithTimeout(50*time.Millisecond),
-		WithDiagnostics(diag),
-		WithParallelism(3),
-	)
-	defer e.Stop()
+		e := mk(
+			WithTimeout(50*time.Millisecond),
+			WithRetryDelayFunc(NewConstantDelayFunc(0*time.Millisecond)),
+			WithDiagnostics(diag),
+			WithParallelism(3),
+			WithTimeSource(cs),
+		)
+		defer e.Stop()
 
-	e.ExecAndForget(
-		func(ctxt context.Context) (interface{}, error) {
-			return "ok", nil
-		},
-	)
+		e.ExecAndForget(
+			func(ctxt context.Context) (interface{}, error) {
+				return "ok", nil
+			},
+		)
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			return nil, errors.New("i failed")
-		},
-		func(try Try) {},
-	)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				return nil, errors.New("i failed")
+			},
+			func(try Try) {},
+		)
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			<-ctxt.Done()
-			return nil, errors.New("ctxt done")
-		},
-		func(try Try) {},
-	)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				<-ctxt.Done()
+				return nil, errors.New("ctxt done")
+			},
+			func(try Try) {},
+		)
 
-	diag.awaitTasks(3)
+		// Await result of successful and failed tasks.
+		assert.HasSameElements(
+			t,
+			[]AttemptResult{<-diag.attemptResults, <-diag.attemptResults},
+			[]AttemptResult{AttemptSuccess, AttemptError},
+		)
 
-	assert.Equal(t, diag.tasksStarted, 3)
-	assert.Equal(t, len(diag.taskResults), 3)
-	assert.Equal(t, diag.attemptsStarted, 3)
-	assert.HasSameElements(
-		t,
-		diag.attemptResults,
-		[]AttemptResult{AttemptSuccess, AttemptError, AttemptGlobalTimeout},
-	)
-	assert.Equal(t, diag.callbacks, 2)
+		cs.Advance(50 * time.Millisecond)
+		assert.Equal(t, <-diag.attemptResults, AttemptGlobalTimeout)
+
+		assert.HasSameElements(
+			t,
+			[]AttemptResult{<-diag.taskResults, <-diag.taskResults, <-diag.taskResults},
+			[]AttemptResult{AttemptSuccess, AttemptError, AttemptGlobalTimeout},
+		)
+
+		assert.Equal(t, diag.countPendingTaskStarts(), 3)
+		assert.Equal(t, diag.countPendingAttemptStarts(), 3)
+		assert.Equal(t, diag.callbacks, int32(2))
+	})
 }
 
 func testExecAttemptDiagnostics(t *testing.T, mk mkExecutor) {
-	diag := &testDiag{}
 
-	e := mk(
-		WithDiagnostics(diag),
-		WithAttemptTimeout(50*time.Millisecond),
-		WithRetryDelayFunc(NewConstantDelayFunc(10*time.Millisecond)),
-		WithParallelism(3),
-		WithMaxAttempts(2),
-	)
-	defer e.Stop()
+	tbntime.WithTimeAt(time.Now().Truncate(time.Hour), func(cs tbntime.ControlledSource) {
+		tick := func(s string) { fmt.Println("time:", cs.Now(), "@", s) }
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			return "ok", nil
-		},
-		func(try Try) {},
-	)
+		diag := newTestDiag(3, 5)
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			return nil, errors.New("i failed")
-		},
-		func(try Try) {},
-	)
+		e := mk(
+			WithDiagnostics(diag),
+			WithAttemptTimeout(50*time.Millisecond),
+			WithRetryDelayFunc(NewConstantDelayFunc(10*time.Millisecond)),
+			WithParallelism(3),
+			WithMaxAttempts(2),
+			WithTimeSource(cs),
+		)
+		defer e.Stop()
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			<-ctxt.Done()
-			return nil, errors.New("ctxt done")
-		},
-		func(try Try) {},
-	)
+		tick("start")
 
-	diag.awaitTasks(3)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				return "ok", nil
+			},
+			func(try Try) {},
+		)
 
-	assert.Equal(t, diag.tasksStarted, 3)
-	assert.HasSameElements(
-		t,
-		diag.taskResults,
-		[]AttemptResult{AttemptSuccess, AttemptError, AttemptTimeout},
-	)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				return nil, errors.New("i failed")
+			},
+			func(try Try) {},
+		)
 
-	assert.Equal(t, diag.attemptsStarted, 5)
-	assert.HasSameElements(
-		t,
-		diag.attemptResults,
-		[]AttemptResult{
-			AttemptSuccess,
-			AttemptError, AttemptError,
-			AttemptTimeout, AttemptTimeout,
-		},
-	)
-	assert.Equal(t, diag.callbacks, 3)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				<-ctxt.Done()
+				return nil, errors.New("ctxt done")
+			},
+			func(try Try) {},
+		)
+
+		// 3 tasks started
+		assert.Equal(t, <-diag.taskStarts, unit{})
+		assert.Equal(t, <-diag.taskStarts, unit{})
+		assert.Equal(t, <-diag.taskStarts, unit{})
+
+		// 3 attempts started
+		assert.Equal(t, <-diag.attemptStarts, unit{})
+		assert.Equal(t, <-diag.attemptStarts, unit{})
+		assert.Equal(t, <-diag.attemptStarts, unit{})
+
+		// 1 attempt success, 1 fails
+		assert.HasSameElements(
+			t,
+			[]AttemptResult{<-diag.attemptResults, <-diag.attemptResults},
+			[]AttemptResult{AttemptSuccess, AttemptError},
+		)
+
+		// 1 task succeeds
+		assert.Equal(t, <-diag.taskResults, AttemptSuccess)
+
+		// Trigger failed task retry
+		tick("trigger retry")
+		for !cs.TriggerNextTimer() {
+		}
+		tick("triggered retry")
+
+		// 1 attempt starts (retry), and fails again
+		assert.Equal(t, <-diag.attemptStarts, unit{})
+		assert.Equal(t, <-diag.attemptResults, AttemptError)
+		assert.Equal(t, <-diag.taskResults, AttemptError)
+
+		// Trigger slow task timeout
+		tick("trigger timeout 1")
+		for !cs.TriggerNextContext() {
+		}
+		tick("triggered timeout 1")
+
+		// 1 attempt times outs
+		assert.Equal(t, <-diag.attemptResults, AttemptTimeout)
+
+		// Trigger timed out task retry
+		tick("trigger retry timeout")
+		for !cs.TriggerNextTimer() {
+		}
+		tick("triggered retry timeout")
+
+		// 1 attempt starts (retry)
+		assert.Equal(t, <-diag.attemptStarts, unit{})
+
+		// Trigger slow task timeout #2
+		tick("trigger timeout 2")
+		for !cs.TriggerNextContext() {
+		}
+		tick("triggered timeout 2")
+
+		assert.Equal(t, <-diag.attemptResults, AttemptTimeout)
+		assert.Equal(t, <-diag.taskResults, AttemptTimeout)
+
+		assert.Equal(t, diag.callbacks, int32(3))
+	})
 }
