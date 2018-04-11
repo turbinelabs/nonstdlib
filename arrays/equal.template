@@ -16,7 +16,7 @@ limitations under the License.
 
 package arrays
 {{range .types}}
-func Equal{{.Capitalize}}(a, b []{{.Type}}) bool {
+func Equal{{.Public}}(a, b []{{.Type}}) bool {
 	aLen := len(a)
 	if aLen != len(b) {
 		return false

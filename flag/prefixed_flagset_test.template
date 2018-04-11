@@ -29,32 +29,32 @@ import (
 )
 {{- end}}
 {{range .types}}
-var zeroVal{{.Capitalize}} {{.Type}}
+var zeroVal{{.Public}} {{.Type}}
 {{- end}}
 
 var (
 	generatedTestCases = []prefixedFlagTestCase{
 {{- range .types}}
 		{
-			name:     "{{.VarName}}",
-			flagType: reflect.TypeOf(zeroVal{{.Capitalize}}),
+			name:     "{{.Private}}",
+			flagType: reflect.TypeOf(zeroVal{{.Public}}),
 			addFlag: func(f *prefixedFlagSet) interface{} {
-				return f.{{.Capitalize}}(
-					"{{.VarName}}",
-					zeroVal{{.Capitalize}},
+				return f.{{.Public}}(
+					"{{.Private}}",
+					zeroVal{{.Public}},
 					flagUsage,
 				)
 			},
 		},
 		{
-			name:     "{{.VarName}}-var",
-			flagType: reflect.TypeOf(zeroVal{{.Capitalize}}),
+			name:     "{{.Private}}-var",
+			flagType: reflect.TypeOf(zeroVal{{.Public}}),
 			addFlag: func(f *prefixedFlagSet) interface{} {
 				var target {{.Type}}
-				f.{{.Capitalize}}Var(
+				f.{{.Public}}Var(
 					&target,
-					"{{.VarName}}-var",
-					zeroVal{{.Capitalize}},
+					"{{.Private}}-var",
+					zeroVal{{.Public}},
 					flagUsage,
 				)
 				return &target

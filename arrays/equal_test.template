@@ -22,18 +22,18 @@ import (
 	"github.com/turbinelabs/test/assert"
 )
 {{range .types}}
-func TestEqual{{.Capitalize}}(t *testing.T) {
+func TestEqual{{.Public}}(t *testing.T) {
 	var z, nz {{.Type}}
 	nz = {{if eq .Type "string"}}"X"{{else}}1{{end}}
 	x := []{{.Type}}{z, nz, z, nz, z, nz}
-	assert.True(t, Equal{{.Capitalize}}(nil, nil))
-	assert.True(t, Equal{{.Capitalize}}(x[0:0], x[1:1]))
-	assert.True(t, Equal{{.Capitalize}}(x[0:0], nil))
-	assert.True(t, Equal{{.Capitalize}}(nil, x[0:0]))
-	assert.False(t, Equal{{.Capitalize}}(x[0:1], x[0:2]))
-	assert.False(t, Equal{{.Capitalize}}(x[0:2], x[0:1]))
-	assert.True(t, Equal{{.Capitalize}}(x, x))
-	assert.True(t, Equal{{.Capitalize}}(x[0:3], x[2:5]))
-	assert.False(t, Equal{{.Capitalize}}(x[0:3], x[1:4]))
+	assert.True(t, Equal{{.Public}}(nil, nil))
+	assert.True(t, Equal{{.Public}}(x[0:0], x[1:1]))
+	assert.True(t, Equal{{.Public}}(x[0:0], nil))
+	assert.True(t, Equal{{.Public}}(nil, x[0:0]))
+	assert.False(t, Equal{{.Public}}(x[0:1], x[0:2]))
+	assert.False(t, Equal{{.Public}}(x[0:2], x[0:1]))
+	assert.True(t, Equal{{.Public}}(x, x))
+	assert.True(t, Equal{{.Public}}(x[0:3], x[2:5]))
+	assert.False(t, Equal{{.Public}}(x[0:3], x[1:4]))
 }
 {{end -}}

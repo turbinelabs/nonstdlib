@@ -61,13 +61,13 @@ type FlagSet interface {
 	// flag. The flag accepts "host:port" strings.
 	HostPort(name string, value HostPort, usage string) *HostPort
 {{range .types}}
-	// {{.Capitalize}}Var defines a {{.Type}} flag with the specified name,
+	// {{.Public}}Var defines a {{.Type}} flag with the specified name,
 	// default value, and usage. The flag's value is stored in p.
-	{{.Capitalize}}Var(p *{{.Type}}, name string, value {{.Type}}, usage string)
+	{{.Public}}Var(p *{{.Type}}, name string, value {{.Type}}, usage string)
 
-	// {{.Capitalize}} defines a {{.Type}} flag with the specified name,
+	// {{.Public}} defines a {{.Type}} flag with the specified name,
 	// default value, and usage. The return value is a pointer
 	// to a variable that stores the flag's value.
-	{{.Capitalize}}(name string, value {{.Type}}, usage string) *{{.Type}}
+	{{.Public}}(name string, value {{.Type}}, usage string) *{{.Type}}
 {{end -}}
 }

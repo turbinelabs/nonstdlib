@@ -28,13 +28,13 @@ import (
 {{end -}}
 
 {{range .types }}
-// {{.Capitalize}}Var wraps the underlying FlagSet's {{.Capitalize}}Var function.
-func (f *prefixedFlagSet) {{.Capitalize}}Var(p *{{.Type}}, name string, value {{.Type}}, usage string) {
-	f.FlagSet.{{.Capitalize}}Var(p, f.prefix+name, value, f.mkUsage(usage))
+// {{.Public}}Var wraps the underlying FlagSet's {{.Public}}Var function.
+func (f *prefixedFlagSet) {{.Public}}Var(p *{{.Type}}, name string, value {{.Type}}, usage string) {
+	f.FlagSet.{{.Public}}Var(p, f.prefix+name, value, f.mkUsage(usage))
 }
 
-// {{.Capitalize}} wraps the underlying FlagSet's {{.Capitalize}} function.
-func (f *prefixedFlagSet) {{.Capitalize}}(name string, value {{.Type}}, usage string) *{{.Type}} {
-	return f.FlagSet.{{.Capitalize}}(f.prefix+name, value, f.mkUsage(usage))
+// {{.Public}} wraps the underlying FlagSet's {{.Public}} function.
+func (f *prefixedFlagSet) {{.Public}}(name string, value {{.Type}}, usage string) *{{.Type}} {
+	return f.FlagSet.{{.Public}}(f.prefix+name, value, f.mkUsage(usage))
 }
 {{end -}}
