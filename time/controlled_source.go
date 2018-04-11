@@ -24,32 +24,45 @@ import (
 	"github.com/turbinelabs/nonstdlib/ptr"
 )
 
-// ControlledSource is a source of time.Time values that returns a
-// fixed time unless modified with the Set or Advance
-// methods. ControlledSource should be used for testing only.
+// ControlledSource is a source of time.Time values that returns a fixed time unless
+// modified with the Set or Advance methods. ControlledSource should be used for
+// testing only.
 type ControlledSource interface {
 	Source
 
-	// Set sets the current time returned by this Source. Timers
-	// and context.Contexts created by this Source are
-	// triggered/canceled if the new time exceeds their deadline.
+	// Set sets the current time returned by this Source. Timers and context.Contexts
+	// created by this Source are triggered/canceled if the new time exceeds their
+	// deadline.
 	Set(time.Time)
 
-	// Set advances the current time returned by this Source.
-	// Timers and context.Contexts created by this Source are
-	// triggered/canceled if the new time exceeds their deadline.
+	// Set advances the current time returned by this Source.  Timers and
+	// context.Contexts created by this Source are triggered/canceled if the new time
+	// exceeds their deadline.
 	Advance(time.Duration)
 
-	// TriggerAllTimers set the current time to the latest
-	// deadline of all timers and returns the number of timers
-	// that were triggered. If no timers are live, it returns 0
-	// and the time is not advanced. Any Contexts whose deadlines
-	// are exceeded will also be triggered.
+	// TriggerAllTimers set the current time to the latest deadline of any timers
+	// Returns the number of timers that were triggered. If no timers are are live,
+	// it returns 0 and the time is not advanced. Any contexts whose deadlines expire
+	// based on the updated time are triggered as well.
 	TriggerAllTimers() int
+
+	// TriggerNextTimer sets the current time to the earliest deadline of all timers
+	// created by this ControlledSource and triggers all timers with that
+	// deadline. If no timers are live, it returns false and the time is not
+	// advanced. Any contexts whose deadlines expire based on the updated time are
+	// triggered as well.
+	TriggerNextTimer() bool
+
+	// TriggerNextContext sets the current time to the earliest deadline of all
+	// contexts created by this ControlledSource and triggers all contexts with that
+	// deadline. If no contexts are live, it returns false and the time is not
+	// advanced. Any timers whose deadlines expire based on the updated time are
+	// triggered as well.
+	TriggerNextContext() bool
 }
 
-// WithTimeAt creates a new ControlledSource with the given time and
-// passes it to the given function for testing.
+// WithTimeAt creates a new ControlledSource with the given time and passes it to the
+// given function for testing.
 func WithTimeAt(t time.Time, f func(ControlledSource)) {
 	s := &controlledTimeSource{
 		now:   t,
@@ -58,14 +71,14 @@ func WithTimeAt(t time.Time, f func(ControlledSource)) {
 	f(s)
 }
 
-// WithCurrentTimeFrozen Creates a new ControlledSource with the
-// current time and passes it to the given function for testing.
+// WithCurrentTimeFrozen Creates a new ControlledSource with the current time and
+// passes it to the given function for testing.
 func WithCurrentTimeFrozen(f func(ControlledSource)) {
 	WithTimeAt(time.Now(), f)
 }
 
-// NewIncrementingControlledSource returns a new ControlledSource that
-// increments the controlled time by some delta every time Now() is called.
+// NewIncrementingControlledSource returns a new ControlledSource that increments the
+// controlled time by some delta every time Now() is called.
 func NewIncrementingControlledSource(at time.Time, delta time.Duration) ControlledSource {
 	return &incrementingTimeSource{
 		&controlledTimeSource{
@@ -76,9 +89,9 @@ func NewIncrementingControlledSource(at time.Time, delta time.Duration) Controll
 	}
 }
 
-// controlledTimeSource is a deterministic Source of time values. It
-// provides Timer and context.Context implementations that are tied to
-// the current time reported by Now().
+// controlledTimeSource is a deterministic Source of time values. It provides Timer
+// and context.Context implementations that are tied to the current time reported by
+// Now().
 type controlledTimeSource struct {
 	now      time.Time
 	timers   []*controlledTimer
@@ -172,6 +185,62 @@ func (s *controlledTimeSource) TriggerAllTimers() int {
 	return n
 }
 
+func (s *controlledTimeSource) TriggerNextTimer() bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	var newTime *time.Time
+
+	for _, timer := range s.timers {
+		if timer == nil || timer.deadline == nil || !timer.deadline.After(s.now) {
+			// Invalid/expired timer or deadline already expired, so ignore it.
+			continue
+		}
+
+		if newTime == nil || timer.deadline.Before(*newTime) {
+			// This timer's deadline is earlier than the earliest we've seen.
+			newTime = timer.deadline
+		}
+	}
+
+	if newTime == nil {
+		return false
+	}
+
+	s.now = *newTime
+	s.checkDeadlines()
+
+	return true
+}
+
+func (s *controlledTimeSource) TriggerNextContext() bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	var newTime *time.Time
+
+	for _, ctxt := range s.contexts {
+		if ctxt == nil || !ctxt.deadline.After(s.now) {
+			// Invalid context or deadline already expired, so ignore it.
+			continue
+		}
+
+		if newTime == nil || ctxt.deadline.Before(*newTime) {
+			// This context's deadline is earlier than the earliest we've seen.
+			newTime = &ctxt.deadline
+		}
+	}
+
+	if newTime == nil {
+		return false
+	}
+
+	s.now = *newTime
+	s.checkDeadlines()
+
+	return true
+}
+
 func (s *controlledTimeSource) checkDeadlines() (int, int) {
 	numTimers := 0
 	numCtxts := 0
@@ -190,9 +259,8 @@ func (s *controlledTimeSource) checkDeadlines() (int, int) {
 	return numTimers, numCtxts
 }
 
-// incrementingTimeSource wraps a controlledTimeSource and updates
-// the current time by inc each time Now() is called, returning the
-// previous value.
+// incrementingTimeSource wraps a controlledTimeSource and updates the current time
+// by inc each time Now() is called, returning the previous value.
 type incrementingTimeSource struct {
 	*controlledTimeSource
 	inc time.Duration
@@ -204,8 +272,8 @@ func (i *incrementingTimeSource) Now() time.Time {
 	return t
 }
 
-// controlledTimer implements Timer. It requires a ControlledSource to
-// invoke check when the current time is updated.
+// controlledTimer implements Timer. It requires a ControlledSource to invoke check
+// when the current time is updated.
 type controlledTimer struct {
 	source   ControlledSource
 	deadline *time.Time
@@ -266,8 +334,8 @@ func (t *controlledTimer) check(now time.Time) bool {
 	return false
 }
 
-// controlledTimer implements context.Context. It requires a
-// ControlledSource to invoke check when the current time is updated.
+// controlledTimer implements context.Context. It requires a ControlledSource to
+// invoke check when the current time is updated.
 type controlledContext struct {
 	context.Context
 	source   Source

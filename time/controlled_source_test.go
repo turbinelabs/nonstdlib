@@ -168,6 +168,86 @@ func TestControlledSourceTriggerAllTimers(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestControlledSourceTriggerNextTimer(t *testing.T) {
+	original := time.Now()
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
+
+	timer1 := source.NewTimer(1 * time.Second)
+	timer2 := source.NewTimer(2 * time.Second)
+	timer3 := source.NewTimer(3 * time.Second)
+
+	ctxt1, cancel1 := source.NewContextWithTimeout(context.TODO(), 3*time.Second)
+	defer cancel1()
+	ctxt2, cancel2 := source.NewContextWithTimeout(context.TODO(), 10*time.Second)
+	defer cancel2()
+
+	assert.True(t, source.TriggerNextTimer())
+	assert.Equal(t, source.Now(), original.Add(1*time.Second))
+	tm, ok := checkTimer(timer1)
+	assert.Equal(t, tm, original.Add(1*time.Second))
+
+	_, ok = checkTimer(timer2)
+	assert.False(t, ok)
+
+	assert.True(t, source.TriggerNextTimer())
+	assert.Equal(t, source.Now(), original.Add(2*time.Second))
+	tm, ok = checkTimer(timer2)
+	assert.Equal(t, tm, original.Add(2*time.Second))
+
+	_, ok = checkTimer(timer3)
+	assert.False(t, ok)
+
+	assert.True(t, source.TriggerNextTimer())
+	assert.Equal(t, source.Now(), original.Add(3*time.Second))
+	tm, ok = checkTimer(timer3)
+	assert.Equal(t, tm, original.Add(3*time.Second))
+	ok, err := checkContext(ctxt1)
+	assert.Equal(t, err, context.DeadlineExceeded)
+	assert.True(t, ok)
+
+	assert.False(t, source.TriggerNextTimer())
+
+	ok, _ = checkContext(ctxt2)
+	assert.False(t, ok)
+}
+
+func TestControlledSourceTriggerNextContext(t *testing.T) {
+	original := time.Now()
+	source := &controlledTimeSource{now: original, mutex: &sync.Mutex{}}
+
+	timer1 := source.NewTimer(1 * time.Second)
+	timer2 := source.NewTimer(2 * time.Second)
+	timer3 := source.NewTimer(3 * time.Second)
+
+	ctxt1, cancel1 := source.NewContextWithTimeout(context.TODO(), 3*time.Second)
+	defer cancel1()
+	ctxt2, cancel2 := source.NewContextWithTimeout(context.TODO(), 10*time.Second)
+	defer cancel2()
+
+	assert.True(t, source.TriggerNextContext())
+	assert.Equal(t, source.Now(), original.Add(3*time.Second))
+	tm, ok := checkTimer(timer1)
+	assert.Equal(t, tm, original.Add(3*time.Second))
+	tm, ok = checkTimer(timer2)
+	assert.Equal(t, tm, original.Add(3*time.Second))
+	tm, ok = checkTimer(timer3)
+	assert.Equal(t, tm, original.Add(3*time.Second))
+	ok, err := checkContext(ctxt1)
+	assert.Equal(t, err, context.DeadlineExceeded)
+	assert.True(t, ok)
+
+	ok, _ = checkContext(ctxt2)
+	assert.False(t, ok)
+
+	assert.True(t, source.TriggerNextContext())
+	assert.Equal(t, source.Now(), original.Add(10*time.Second))
+	ok, err = checkContext(ctxt2)
+	assert.Equal(t, err, context.DeadlineExceeded)
+	assert.True(t, ok)
+
+	assert.False(t, source.TriggerNextContext())
+}
+
 func TestWithTimeAt(t *testing.T) {
 	original := time.Now()
 
