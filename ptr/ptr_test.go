@@ -481,3 +481,56 @@ func TestTimeMap(t *testing.T) {
 		assert.DeepEqual(t, in, out2)
 	}
 }
+
+func TestBoolEqualWithNils(t *testing.T) {
+	assert.True(t, BoolEqual(nil, nil))
+	assert.False(t, BoolEqual(Bool(true), nil))
+	assert.False(t, BoolEqual(Bool(false), nil))
+}
+
+func TestStringEqualWithNils(t *testing.T) {
+	assert.True(t, StringEqual(nil, nil))
+	assert.False(t, StringEqual(String("hello"), nil))
+	assert.False(t, StringEqual(String(""), nil))
+}
+
+func TestIntEqualWithNils(t *testing.T) {
+	assert.True(t, IntEqual(nil, nil))
+	assert.False(t, IntEqual(Int(0), nil))
+	assert.False(t, IntEqual(Int(100), nil))
+}
+
+func TestBoolEqualWhenEqual(t *testing.T) {
+	assert.True(t, BoolEqual(Bool(true), Bool(true)))
+	assert.True(t, BoolEqual(Bool(false), Bool(false)))
+	bPtr := Bool(true)
+	assert.True(t, BoolEqual(bPtr, bPtr))
+}
+
+func TestIntEqualWhenEqual(t *testing.T) {
+	iPtr := Int(500)
+	assert.True(t, IntEqual(Int(100), Int(100)))
+	assert.True(t, IntEqual(iPtr, iPtr))
+}
+
+func TestStringEqualWhenEqual(t *testing.T) {
+	sPtr := String("harro")
+	assert.True(t, StringEqual(String("blerp"), String("blerp")))
+	assert.True(t, StringEqual(sPtr, sPtr))
+}
+
+func TestBoolEqualWhenNotEqual(t *testing.T) {
+	assert.False(t, BoolEqual(Bool(true), Bool(false)))
+	assert.False(t, BoolEqual(Bool(true), nil))
+	assert.False(t, BoolEqual(Bool(false), nil))
+}
+
+func TestIntEqualWhenNotEqual(t *testing.T) {
+	assert.False(t, IntEqual(Int(5), Int(10)))
+	assert.False(t, IntEqual(Int(5), nil))
+}
+
+func TestStringEqualWhenNotEqual(t *testing.T) {
+	assert.False(t, StringEqual(String("not"), String("equal")))
+	assert.False(t, StringEqual(String("nope"), nil))
+}

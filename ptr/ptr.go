@@ -422,3 +422,42 @@ func DurationValue(v *time.Duration) time.Duration {
 	}
 	return 0
 }
+
+// BoolEqual compares two bool pointer values
+func BoolEqual(a, b *bool) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
+	return *a == *b
+}
+
+// StringEqual compares two string pointer values
+func StringEqual(a, b *string) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
+	return *a == *b
+}
+
+// IntEqual compares two int pointer values
+func IntEqual(a, b *int) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
+	return *a == *b
+}
