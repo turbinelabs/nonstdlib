@@ -14,18 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package flag_test
+package flag
 
 import (
 	"flag"
 	"fmt"
-
-	tbnflag "github.com/turbinelabs/nonstdlib/flag"
 )
 
 func ExampleNewStrings() {
-	var strings tbnflag.Strings // typically a field in a struct
-	strings = tbnflag.NewStrings()
+	var strings Strings // typically a field in a struct
+	strings = NewStrings()
 
 	flagset := flag.NewFlagSet("example", flag.PanicOnError)
 	flagset.Var(
@@ -46,8 +44,8 @@ func ExampleNewStrings() {
 }
 
 func ExampleNewStringsWithConstraint() {
-	var strings tbnflag.Strings // typically a field in a struct
-	strings = tbnflag.NewStringsWithConstraint("choice1", "option2", "possibility3")
+	var strings Strings // typically a field in a struct
+	strings = NewStringsWithConstraint("choice1", "option2", "possibility3")
 
 	flagset := flag.NewFlagSet("example", flag.PanicOnError)
 	flagset.Var(
@@ -67,8 +65,8 @@ func ExampleNewStringsWithConstraint() {
 }
 
 func ExampleStrings_withDelimiter() {
-	var strings tbnflag.Strings // typically a field in a struct
-	strings = tbnflag.Strings{Delimiter: ";"}
+	var strings Strings // typically a field in a struct
+	strings = Strings{Delimiter: ";"}
 
 	flagset := flag.NewFlagSet("example", flag.PanicOnError)
 	flagset.Var(
@@ -88,8 +86,8 @@ func ExampleStrings_withDelimiter() {
 }
 
 func ExampleNewChoice() {
-	var choice tbnflag.Choice // typically a field in a struct
-	choice = tbnflag.NewChoice("a", "b", "c")
+	var choice Choice // typically a field in a struct
+	choice = NewChoice("a", "b", "c")
 
 	flagset := flag.NewFlagSet("example", flag.PanicOnError)
 	flagset.Var(

@@ -129,7 +129,6 @@ type bakeTestConfig struct {
 	maxFailures      int
 
 	exec           executor.Executor
-	delayType      string
 	attemptTimeout time.Duration
 	timeout        time.Duration
 	maxAttempts    int
@@ -210,7 +209,6 @@ func newFromFlags() (*fromFlags, error) {
 func (ff *fromFlags) Validate() error {
 	durationFlags := map[string]time.Duration{}
 	intFlags := map[string]int{}
-	delayType := ""
 
 	ff.flagSet.VisitAll(func(f *flag.Flag) {
 		if !strings.HasPrefix(f.Name, "exec.") {
@@ -222,10 +220,6 @@ func (ff *fromFlags) Validate() error {
 				durationFlags[f.Name] = v
 			case int:
 				intFlags[f.Name] = v
-			default:
-				if f.Name == "exec.delay-type" {
-					delayType = f.Value.String()
-				}
 			}
 		} else {
 			panic(fmt.Sprintf("cannot get value for %s", f.Name))
