@@ -204,7 +204,6 @@ func TestTimeSelectors(t *testing.T) {
 		{"Many Times Max 3", mixedT, now, Max},
 	}
 
-	// TODO: include unset
 	for _, c := range cases {
 		assert.Group(c.name, t, func(tg *assert.G) {
 			c.run(tg)
