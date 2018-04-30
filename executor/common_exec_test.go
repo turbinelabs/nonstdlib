@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	tbntime "github.com/turbinelabs/nonstdlib/time"
 	"github.com/turbinelabs/test/assert"
 	"github.com/turbinelabs/test/log"
 )
@@ -28,7 +29,7 @@ func (d *testData) apply(r *testRun) (interface{}, error) {
 			r.attemptedRetries <- d.id + " fail"
 		}
 		if d.failFunc != nil {
-			d.failFunc()
+			defer d.failFunc()
 		}
 		d.fails--
 		return nil, errors.New("failed")
@@ -60,109 +61,138 @@ type panicStruct struct {
 type mkExecutor func(options ...Option) Executor
 
 func testRetriesWithNoCallback(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
-		WithMaxAttempts(3),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithTimeSource(cs),
+			WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
+			WithMaxAttempts(3),
+		)
+		defer e.Stop()
 
-	run := &testRun{
-		attemptedRetries: make(chan string, 10),
-	}
-	defer close(run.attemptedRetries)
+		run := &testRun{
+			attemptedRetries: make(chan string, 10),
+		}
+		defer close(run.attemptedRetries)
 
-	p1 := &testData{"p1", 1, nil}
-	p2 := &testData{"p2", 0, nil}
-	p3 := &testData{"p3", 3, nil}
+		p1 := &testData{"p1", 1, nil}
+		p2 := &testData{"p2", 0, nil}
+		p3 := &testData{"p3", 3, nil}
 
-	e.ExecAndForget(p1.mkFunc(run))
-	e.ExecAndForget(p2.mkFunc(run))
-	e.ExecAndForget(p3.mkFunc(run))
+		e.ExecAndForget(p1.mkFunc(run))
+		e.ExecAndForget(p2.mkFunc(run))
+		e.ExecAndForget(p3.mkFunc(run))
 
-	messages := [6]string{}
-	for i := 0; i < 6; i++ {
-		messages[i] = <-run.attemptedRetries
-	}
+		// Wait for p1, p2, and p3 to complete their first attempts.
+		assert.HasSameElements(
+			t,
+			[]string{<-run.attemptedRetries, <-run.attemptedRetries, <-run.attemptedRetries},
+			[]string{"p1 fail", "p2 ok", "p3 fail"},
+		)
 
-	assert.HasSameElements(t, messages[0:3], []string{"p1 fail", "p2 ok", "p3 fail"})
-	assert.HasSameElements(t, messages[3:5], []string{"p1 ok", "p3 fail"})
-	assert.HasSameElements(t, messages[5:6], []string{"p3 fail"})
+		// Wait for p1 and p3 to complete their second attempts.
+		cs.Advance(50 * time.Millisecond)
+		assert.HasSameElements(
+			t,
+			[]string{<-run.attemptedRetries, <-run.attemptedRetries},
+			[]string{"p1 ok", "p3 fail"},
+		)
+
+		// Wait for p3 to complete its final attempt.
+		cs.Advance(50 * time.Millisecond)
+		assert.Equal(t, <-run.attemptedRetries, "p3 fail")
+	})
 }
 
 func testEarlierNextRetry(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithRetryDelayFunc(NewConstantDelayFunc(100*time.Millisecond)),
-		WithMaxAttempts(4),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithTimeSource(cs),
+			WithRetryDelayFunc(NewConstantDelayFunc(100*time.Millisecond)),
+			WithMaxAttempts(4),
+		)
+		defer e.Stop()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+		var wg sync.WaitGroup
+		wg.Add(1)
 
-	run := &testRun{
-		attemptedRetries: make(chan string, 10),
-	}
-	defer close(run.attemptedRetries)
+		run := &testRun{
+			attemptedRetries: make(chan string, 10),
+		}
+		defer close(run.attemptedRetries)
 
-	p1 := &testData{"p1", 1, wg.Done}
-	p2 := &testData{"p2", 0, nil}
+		p1 := &testData{"p1", 1, wg.Done}
+		p2 := &testData{"p2", 0, nil}
 
-	go func() {
+		// Run p1 and wait for it to fail once.
+		e.ExecAndForget(p1.mkFunc(run))
 		wg.Wait()
-		time.Sleep(50 * time.Millisecond)
+		assert.Equal(t, <-run.attemptedRetries, "p1 fail")
+
+		// Halfway through it's retry delay, start a new task and wait for it to complete.
+		cs.Advance(50 * time.Millisecond)
 		e.ExecAndForget(
 			func(_ context.Context) (interface{}, error) {
 				return p2.apply(run)
 			},
 		)
-	}()
+		assert.Equal(t, <-run.attemptedRetries, "p2 ok")
 
-	e.ExecAndForget(p1.mkFunc(run))
-
-	messages := make([]string, 3)
-	for i := 0; i < 3; i++ {
-		messages[i] = <-run.attemptedRetries
-	}
-
-	assert.HasSameElements(t, messages, []string{"p1 fail", "p2 ok", "p1 ok"})
+		// Complete p1's retry delay and wait for it to complete.
+		cs.Advance(50 * time.Millisecond)
+		assert.Equal(t, <-run.attemptedRetries, "p1 ok")
+	})
 }
 
 func testExecInvokesCallback(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
-		WithMaxAttempts(3),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithTimeSource(cs),
+			WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
+			WithMaxAttempts(3),
+		)
+		defer e.Stop()
 
-	attemptedRetries := make(chan string, 10)
-	defer close(attemptedRetries)
+		callbacks := make(chan string, 10)
+		defer close(callbacks)
 
-	run := &testRun{}
+		run := &testRun{
+			attemptedRetries: make(chan string, 10),
+		}
 
-	p1 := &testData{"p1", 1, nil}
-	p2 := &testData{"p2", 0, nil}
-	p3 := &testData{"p3", 3, nil}
+		p1 := &testData{"p1", 1, nil}
+		p2 := &testData{"p2", 0, nil}
+		p3 := &testData{"p3", 3, nil}
 
-	mkCallback := func(s string) CallbackFunc {
-		return func(t Try) {
-			if t.IsError() {
-				attemptedRetries <- s + " fail"
-			} else {
-				attemptedRetries <- s + " ok"
+		mkCallback := func(s string) CallbackFunc {
+			return func(t Try) {
+				if t.IsError() {
+					callbacks <- s + " fail"
+				} else {
+					callbacks <- s + " ok"
+				}
 			}
 		}
-	}
 
-	e.Exec(p1.mkFunc(run), mkCallback("p1"))
-	e.Exec(p2.mkFunc(run), mkCallback("p2"))
-	e.Exec(p3.mkFunc(run), mkCallback("p3"))
+		// Start tasks, wait for each to complete its first attempt and check for p2's callback.
+		e.Exec(p1.mkFunc(run), mkCallback("p1"))
+		e.Exec(p2.mkFunc(run), mkCallback("p2"))
+		e.Exec(p3.mkFunc(run), mkCallback("p3"))
+		<-run.attemptedRetries
+		<-run.attemptedRetries
+		<-run.attemptedRetries
+		assert.Equal(t, <-callbacks, "p2 ok")
 
-	messages := [3]string{}
-	for i := 0; i < 3; i++ {
-		messages[i] = <-attemptedRetries
-	}
+		// Trigger retries, wait for attempts, and check for p1's callback.
+		cs.Advance(50 * time.Millisecond)
+		<-run.attemptedRetries
+		<-run.attemptedRetries
+		assert.Equal(t, <-callbacks, "p1 ok")
 
-	assert.ArrayEqual(t, messages, []string{"p2 ok", "p1 ok", "p3 fail"})
+		// Trigger retries, wait for last attempt, and check for p3's callback.
+		cs.Advance(50 * time.Millisecond)
+		<-run.attemptedRetries
+		assert.Equal(t, <-callbacks, "p3 fail")
+	})
 }
 
 func testExecExecutesInParallel(t *testing.T, mk mkExecutor) {
@@ -276,28 +306,36 @@ func testExecPanicsBecomeErrors(t *testing.T, mk mkExecutor) {
 }
 
 func testExecStopsWithInFlightRetries(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithRetryDelayFunc(NewConstantDelayFunc(time.Second)),
-		WithMaxAttempts(2),
-	)
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithTimeSource(cs),
+			WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
+			WithMaxAttempts(2),
+		)
 
-	c := make(chan Try, 10)
+		c := make(chan Try, 10)
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+		wg := &sync.WaitGroup{}
+		wg.Add(1)
 
-	e.Exec(
-		func(_ context.Context) (interface{}, error) {
-			defer wg.Done()
-			return nil, errors.New("nope")
-		},
-		func(t Try) {
-			c <- t
-		},
-	)
+		e.Exec(
+			func(_ context.Context) (interface{}, error) {
+				defer wg.Done()
+				return nil, errors.New("nope")
+			},
+			func(t Try) {
+				c <- t
+			},
+		)
 
-	wg.Wait()
-	e.Stop()
+		// Await the task's first attempt.
+		wg.Wait()
 
-	assert.ChannelEmpty(t, c)
+		// Stop the executor.
+		e.Stop()
+
+		// Advance the timer and expect that the task's final retry was not triggered.
+		cs.Advance(50 * time.Millisecond)
+		assert.ChannelEmpty(t, c)
+	})
 }
