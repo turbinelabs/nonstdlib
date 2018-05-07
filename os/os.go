@@ -18,12 +18,12 @@ limitations under the License.
 // functions and variables from the golang os package.
 package os
 
-//go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
+//go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE --write_package_comment=false
 
 // N.B.: On some platforms this produces what looks like a compilation error because
 // mockgen tries to build in go's os package directory before retrying (and succeeding)
 // in this directory.
-//go:generate mockgen -destination mock_fileinfo.go -package $GOPACKAGE os FileInfo
+//go:generate mockgen -destination mock_fileinfo.go --write_package_comment=false -package $GOPACKAGE os FileInfo
 
 import (
 	"io"

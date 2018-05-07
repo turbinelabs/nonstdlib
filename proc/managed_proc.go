@@ -16,7 +16,7 @@ limitations under the License.
 
 package proc
 
-//go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
+//go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE --write_package_comment=false
 
 import (
 	"errors"

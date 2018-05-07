@@ -18,7 +18,7 @@ limitations under the License.
 // using callbacks to indicate success or failure.
 package executor
 
-//go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE
+//go:generate mockgen -source $GOFILE -destination mock_$GOFILE -package $GOPACKAGE --write_package_comment=false
 
 import "context"
 
