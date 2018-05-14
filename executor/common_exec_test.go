@@ -76,6 +76,12 @@ type panicStruct struct {
 
 type mkExecutor func(options ...Option) Executor
 
+func triggerNTimers(cs tbntime.ControlledSource, n int) {
+	for triggered := 0; triggered < n; triggered += cs.TriggerAllTimers() {
+		time.Sleep(1 * time.Millisecond)
+	}
+}
+
 func testRetriesWithNoCallback(t *testing.T, mk mkExecutor) {
 	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
 		e := mk(
@@ -85,37 +91,49 @@ func testRetriesWithNoCallback(t *testing.T, mk mkExecutor) {
 		)
 		defer e.Stop()
 
-		run := &testRun{
+		run1 := &testRun{
 			attemptedRetries: make(chan string, 10),
 		}
-		defer close(run.attemptedRetries)
+		defer close(run1.attemptedRetries)
+
+		run2 := &testRun{
+			attemptedRetries: make(chan string, 10),
+		}
+		defer close(run2.attemptedRetries)
+
+		run3 := &testRun{
+			attemptedRetries: make(chan string, 10),
+		}
+		defer close(run3.attemptedRetries)
 
 		p1 := &testData{"p1", 1, nil}
 		p2 := &testData{"p2", 0, nil}
 		p3 := &testData{"p3", 3, nil}
 
-		e.ExecAndForget(p1.mkFunc(run))
-		e.ExecAndForget(p2.mkFunc(run))
-		e.ExecAndForget(p3.mkFunc(run))
+		e.ExecAndForget(p1.mkFunc(run1))
+		e.ExecAndForget(p2.mkFunc(run2))
+		e.ExecAndForget(p3.mkFunc(run3))
 
 		// Wait for p1, p2, and p3 to complete their first attempts.
-		assert.HasSameElements(
+		triggerNTimers(cs, 3)
+
+		assert.ArrayEqual(
 			t,
-			[]string{<-run.attemptedRetries, <-run.attemptedRetries, <-run.attemptedRetries},
-			[]string{"p1 fail", "p2 ok", "p3 fail"},
+			[]string{<-run1.attemptedRetries, <-run1.attemptedRetries},
+			[]string{"p1 fail", "p1 ok"},
 		)
 
-		// Wait for p1 and p3 to complete their second attempts.
-		cs.Advance(50 * time.Millisecond)
-		assert.HasSameElements(
+		assert.ArrayEqual(
 			t,
-			[]string{<-run.attemptedRetries, <-run.attemptedRetries},
-			[]string{"p1 ok", "p3 fail"},
+			[]string{<-run2.attemptedRetries},
+			[]string{"p2 ok"},
 		)
 
-		// Wait for p3 to complete its final attempt.
-		cs.Advance(50 * time.Millisecond)
-		assert.Equal(t, <-run.attemptedRetries, "p3 fail")
+		assert.ArrayEqual(
+			t,
+			[]string{<-run3.attemptedRetries, <-run3.attemptedRetries, <-run3.attemptedRetries},
+			[]string{"p3 fail", "p3 fail", "p3 fail"},
+		)
 	})
 }
 

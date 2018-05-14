@@ -27,11 +27,23 @@ import (
 	"github.com/turbinelabs/test/assert"
 )
 
+func triggerNextContext(cs tbntime.ControlledSource) {
+	for !cs.TriggerNextContext() {
+		time.Sleep(1 * time.Millisecond)
+	}
+}
+
+func triggerTimers(cs tbntime.ControlledSource) {
+	for cs.TriggerAllTimers() == 0 {
+		time.Sleep(1 * time.Millisecond)
+	}
+}
+
 func testExecWithGlobalTimeoutSucceeds(t *testing.T, mk mkExecutor) {
 	e := mk(
 		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
 		WithMaxAttempts(3),
-		WithTimeout(1*time.Second),
+		WithTimeout(10*time.Second),
 	)
 	defer e.Stop()
 
@@ -62,29 +74,34 @@ func testExecWithGlobalTimeoutSucceeds(t *testing.T, mk mkExecutor) {
 }
 
 func testExecWithGlobalTimeoutTimesOut(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithTimeout(10 * time.Millisecond),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithTimeout(10*time.Millisecond),
+			WithTimeSource(cs),
+		)
+		defer e.Stop()
 
-	c := make(chan Try, 10)
-	defer close(c)
+		c := make(chan Try, 10)
+		defer close(c)
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			<-ctxt.Done()
-			return nil, errors.New("ctxt done")
-		},
-		func(try Try) {
-			c <- try
-		},
-	)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				<-ctxt.Done()
+				return nil, errors.New("ctxt done")
+			},
+			func(try Try) {
+				c <- try
+			},
+		)
 
-	try := <-c
+		triggerNextContext(cs)
 
-	if assert.True(t, try.IsError()) {
-		assert.ErrorContains(t, try.Error(), "action exceeded timeout (10ms)")
-	}
+		try := <-c
+
+		if assert.True(t, try.IsError()) {
+			assert.ErrorContains(t, try.Error(), "action exceeded timeout (10ms)")
+		}
+	})
 }
 
 func testExecWithGlobalTimeoutTimesOutBeforeRetry(t *testing.T, mk mkExecutor) {
@@ -116,9 +133,7 @@ func testExecWithGlobalTimeoutTimesOutBeforeRetry(t *testing.T, mk mkExecutor) {
 		<-sync
 		cs.Advance(0 * time.Millisecond)
 
-		for cs.TriggerAllTimers() == 0 {
-			time.Sleep(10 * time.Millisecond)
-		}
+		triggerTimers(cs)
 
 		<-sync
 
@@ -138,7 +153,7 @@ func testExecManyWithGlobalTimeoutSucceeds(t *testing.T, mk mkExecutor) {
 	e := mk(
 		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
 		WithMaxAttempts(3),
-		WithTimeout(time.Second),
+		WithTimeout(10*time.Second),
 		WithParallelism(3),
 	)
 	defer e.Stop()
@@ -180,52 +195,57 @@ func testExecManyWithGlobalTimeoutSucceeds(t *testing.T, mk mkExecutor) {
 }
 
 func testExecManyWithGlobalTimeoutTimesOut(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithTimeout(10*time.Millisecond),
-		WithParallelism(3),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithTimeout(10*time.Millisecond),
+			WithParallelism(3),
+			WithTimeSource(cs),
+		)
+		defer e.Stop()
 
-	rets := make(chan string, 10)
-	defer close(rets)
+		rets := make(chan string, 10)
+		defer close(rets)
 
-	errs := make(chan error, 10)
-	defer close(errs)
+		errs := make(chan error, 10)
+		defer close(errs)
 
-	f := func(_ context.Context) (interface{}, error) {
-		return "ok", nil
-	}
+		f := func(_ context.Context) (interface{}, error) {
+			return "ok", nil
+		}
 
-	timeoutF := func(ctxt context.Context) (interface{}, error) {
-		<-ctxt.Done()
-		return nil, errors.New("ctxt done")
-	}
+		timeoutF := func(ctxt context.Context) (interface{}, error) {
+			<-ctxt.Done()
+			return nil, errors.New("ctxt done")
+		}
 
-	e.ExecMany(
-		[]Func{f, timeoutF, f},
-		func(_ int, try Try) {
-			if try.IsError() {
-				errs <- try.Error()
-			} else {
-				rets <- try.Get().(string)
-			}
-		},
-	)
+		e.ExecMany(
+			[]Func{f, timeoutF, f},
+			func(_ int, try Try) {
+				if try.IsError() {
+					errs <- try.Error()
+				} else {
+					rets <- try.Get().(string)
+				}
+			},
+		)
 
-	ret1 := <-rets
-	ret2 := <-rets
-	err := <-errs
+		ret1 := <-rets
+		ret2 := <-rets
 
-	assert.Equal(t, ret1, "ok")
-	assert.Equal(t, ret2, "ok")
-	assert.ErrorContains(t, err, "action exceeded timeout (10ms)")
+		cs.Advance(10 * time.Millisecond)
+		err := <-errs
+
+		assert.Equal(t, ret1, "ok")
+		assert.Equal(t, ret2, "ok")
+		assert.ErrorContains(t, err, "action exceeded timeout (10ms)")
+	})
 }
 
 func testExecGatheredWithGlobalTimeoutSucceeds(t *testing.T, mk mkExecutor) {
 	e := mk(
 		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
 		WithMaxAttempts(3),
-		WithTimeout(time.Second),
+		WithTimeout(10*time.Second),
 		WithParallelism(3),
 	)
 	defer e.Stop()
@@ -255,98 +275,122 @@ func testExecGatheredWithGlobalTimeoutSucceeds(t *testing.T, mk mkExecutor) {
 }
 
 func testExecGatheredWithGlobalTimeoutTimesOut(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithTimeout(10*time.Millisecond),
-		WithParallelism(3),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithTimeout(10*time.Millisecond),
+			WithParallelism(3),
+			WithTimeSource(cs),
+		)
+		defer e.Stop()
 
-	c := make(chan Try, 10)
-	defer close(c)
+		c := make(chan Try, 10)
+		defer close(c)
 
-	f := func(_ context.Context) (interface{}, error) {
-		return "ok", nil
-	}
+		f := func(_ context.Context) (interface{}, error) {
+			return "ok", nil
+		}
 
-	timeoutF := func(ctxt context.Context) (interface{}, error) {
-		<-ctxt.Done()
-		return nil, errors.New("ctxt done")
-	}
+		timeoutF := func(ctxt context.Context) (interface{}, error) {
+			<-ctxt.Done()
+			return nil, errors.New("ctxt done")
+		}
 
-	e.ExecGathered([]Func{f, timeoutF, f}, func(try Try) { c <- try })
+		e.ExecGathered([]Func{f, timeoutF, f}, func(try Try) { c <- try })
 
-	try := <-c
+		triggerNextContext(cs)
 
-	if assert.True(t, try.IsError()) {
-		assert.ErrorContains(t, try.Error(), "action exceeded timeout (10ms)")
-	}
+		try := <-c
+
+		if assert.True(t, try.IsError()) {
+			assert.ErrorContains(t, try.Error(), "action exceeded timeout (10ms)")
+		}
+	})
 }
 
 func testExecWithAttemptTimeoutSucceeds(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
-		WithMaxAttempts(3),
-		WithAttemptTimeout(10*time.Millisecond),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
+			WithMaxAttempts(3),
+			WithAttemptTimeout(10*time.Millisecond),
+			WithTimeSource(cs),
+		)
+		defer e.Stop()
 
-	c := make(chan Try, 10)
-	defer close(c)
+		c := make(chan Try, 10)
+		defer close(c)
 
-	invocations := 0
+		invocations := 0
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			invocations++
-			if invocations == 3 {
-				return "ok", nil
-			}
-			<-ctxt.Done()
-			return nil, errors.New("not yet")
-		},
-		func(try Try) {
-			c <- try
-		},
-	)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				invocations++
+				if invocations == 3 {
+					return "ok", nil
+				}
+				<-ctxt.Done()
+				return nil, errors.New("not yet")
+			},
+			func(try Try) {
+				c <- try
+			},
+		)
 
-	try := <-c
+		triggerNextContext(cs) // timeout the attempt
+		triggerTimers(cs)      // trigger 2nd attempt
 
-	assert.Equal(t, invocations, 3)
-	if assert.True(t, try.IsReturn()) {
-		assert.Equal(t, try.Get(), "ok")
-	}
+		triggerNextContext(cs) // timeout the 2nd attempt
+		triggerTimers(cs)      // trigger 3rd attempt
+
+		try := <-c
+
+		assert.Equal(t, invocations, 3)
+		if assert.True(t, try.IsReturn()) {
+			assert.Equal(t, try.Get(), "ok")
+		}
+	})
 }
 
 func testExecWithAttemptTimeoutTimesOut(t *testing.T, mk mkExecutor) {
-	e := mk(
-		WithRetryDelayFunc(NewConstantDelayFunc(1*time.Millisecond)),
-		WithMaxAttempts(3),
-		WithAttemptTimeout(10*time.Millisecond),
-	)
-	defer e.Stop()
+	tbntime.WithCurrentTimeFrozen(func(cs tbntime.ControlledSource) {
+		e := mk(
+			WithRetryDelayFunc(NewConstantDelayFunc(50*time.Millisecond)),
+			WithMaxAttempts(3),
+			WithAttemptTimeout(10*time.Millisecond),
+			WithTimeSource(cs),
+		)
+		defer e.Stop()
 
-	c := make(chan Try, 10)
-	defer close(c)
+		c := make(chan Try, 10)
+		defer close(c)
 
-	invocations := 0
+		invocations := 0
 
-	e.Exec(
-		func(ctxt context.Context) (interface{}, error) {
-			invocations++
-			<-ctxt.Done()
-			return nil, errors.New("ctxt done")
-		},
-		func(try Try) {
-			c <- try
-		},
-	)
+		e.Exec(
+			func(ctxt context.Context) (interface{}, error) {
+				invocations++
+				<-ctxt.Done()
+				return nil, errors.New("ctxt done")
+			},
+			func(try Try) {
+				c <- try
+			},
+		)
 
-	try := <-c
+		triggerNextContext(cs) // timeout the attempt
+		triggerTimers(cs)      // trigger 2nd attempt
 
-	assert.Equal(t, invocations, 3)
-	if assert.True(t, try.IsError()) {
-		assert.ErrorContains(t, try.Error(), "action exceeded attempt timeout (10ms)")
-	}
+		triggerNextContext(cs) // timeout the 2nd attempt
+		triggerTimers(cs)      // trigger 3rd attempt
+
+		triggerNextContext(cs) // timeout the 3rd attempt
+		try := <-c
+
+		assert.Equal(t, invocations, 3)
+		if assert.True(t, try.IsError()) {
+			assert.ErrorContains(t, try.Error(), "action exceeded attempt timeout (10ms)")
+		}
+	})
 }
 
 func testExecWithGlobalAndAttemptTimeoutsTimesOut(t *testing.T, mk mkExecutor) {
@@ -383,9 +427,7 @@ func testExecWithGlobalAndAttemptTimeoutsTimesOut(t *testing.T, mk mkExecutor) {
 		<-sync
 		cs.Advance(20 * time.Millisecond)
 
-		for cs.TriggerAllTimers() == 0 {
-			time.Sleep(1 * time.Millisecond)
-		}
+		triggerTimers(cs)
 
 		<-sync
 		cs.Advance(25 * time.Millisecond)
