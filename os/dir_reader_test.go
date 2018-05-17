@@ -18,13 +18,13 @@ package os
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
 	"testing"
 
 	"github.com/turbinelabs/test/assert"
+	"github.com/turbinelabs/test/tempfile"
 )
 
 type dirEntryMap map[string]interface{}
@@ -54,14 +54,11 @@ func mkFiles(t *testing.T, dir string, entries dirEntryMap) {
 }
 
 func prepDir(t *testing.T, entries dirEntryMap) (string, func()) {
-	dir, err := ioutil.TempDir("", "dir-reader")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	dir := tempfile.TempDir(t, "dir-reader")
 
-	mkFiles(t, dir, entries)
+	mkFiles(t, dir.Path(), entries)
 
-	return dir, func() { os.RemoveAll(dir) }
+	return dir.Path(), dir.Cleanup
 }
 
 func TestDirReaderRead(t *testing.T) {
