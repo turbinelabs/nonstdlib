@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/turbinelabs/nonstdlib/ptr"
@@ -22,30 +21,29 @@ func trapStderr(t *testing.T, f func(stderr *bufio.Reader)) {
 	defer reader.Close()
 
 	save := os.Stderr
+	saveFlags := logFlags
 	defer func() {
 		os.Stderr = save
+		logFlags = saveFlags
 		resetLoggers()
 	}()
 	os.Stderr = writer
+	logFlags = 0
 
 	resetLoggers()
 	f(bufio.NewReader(reader))
 }
 
 func testConsumeConsoleLogs(t *testing.T, level string, get func() *log.Logger) {
-	lineRegex := func(msg string) string {
-		return fmt.Sprintf(
-			`^\[%s\] [0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} %s$`,
-			level,
-			msg,
-		)
+	expectedLine := func(msg string) string {
+		return fmt.Sprintf(`[%s] %s`, level, msg) + "\n"
 	}
 
 	trapStderr(t, func(stderr *bufio.Reader) {
 		get().Println("test stderr")
 		testLine, err := stderr.ReadString('\n')
 		assert.Nil(t, err)
-		assert.MatchesRegex(t, strings.TrimSpace(testLine), lineRegex("test stderr"))
+		assert.Equal(t, testLine, expectedLine("test stderr"))
 
 		ch, restore := ConsumeConsoleLogs(10)
 		get().Println("test channel")
@@ -53,7 +51,7 @@ func testConsumeConsoleLogs(t *testing.T, level string, get func() *log.Logger) 
 		msg := <-ch
 
 		assert.Equal(t, msg.Level, level)
-		assert.MatchesRegex(t, strings.TrimSpace(msg.Message), lineRegex("test channel"))
+		assert.Equal(t, msg.Message, expectedLine("test channel"))
 
 		restore()
 
@@ -61,21 +59,21 @@ func testConsumeConsoleLogs(t *testing.T, level string, get func() *log.Logger) 
 
 		testLine, err = stderr.ReadString('\n')
 		assert.Nil(t, err)
-		assert.MatchesRegex(t, strings.TrimSpace(testLine), lineRegex("test stderr after"))
+		assert.Equal(t, testLine, expectedLine("test stderr after"))
 
 		assert.ChannelEmpty(t, ch)
 	})
 }
 
-func TestConsoleConsoleLogsInfo(t *testing.T) {
+func TestConsumeConsoleLogsInfo(t *testing.T) {
 	testConsumeConsoleLogs(t, "info", Info)
 }
 
-func TestConsoleConsoleLogsError(t *testing.T) {
+func TestConsumeConsoleLogsError(t *testing.T) {
 	testConsumeConsoleLogs(t, "error", Error)
 }
 
-func TestConsoleConsoleLogsDebug(t *testing.T) {
+func TestConsumeConsoleLogsDebug(t *testing.T) {
 	savedChoice := logLevelChoice.Choice
 	defer func() {
 		logLevelChoice.Choice = savedChoice

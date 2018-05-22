@@ -1,6 +1,10 @@
 package console
 
-import "os"
+import (
+	"io"
+	"log"
+	"os"
+)
 
 // LogMessage represents a console log level and message.
 type LogMessage struct {
@@ -19,14 +23,20 @@ type LogMessage struct {
 // should not be used outside tests.
 func ConsumeConsoleLogs(capacity int) (<-chan LogMessage, func()) {
 	ch := make(chan LogMessage, capacity)
-	errorLogger.SetOutput(&channelWriter{level: errorLevel, ch: ch})
-	infoLogger.SetOutput(&channelWriter{level: infoLevel, ch: ch})
-	debugLogger.SetOutput(&channelWriter{level: debugLevel, ch: ch})
+
+	set := func(log *log.Logger, w io.Writer, flags int) {
+		log.SetOutput(w)
+		log.SetFlags(flags)
+	}
+
+	set(errorLogger, &channelWriter{level: errorLevel, ch: ch}, 0)
+	set(infoLogger, &channelWriter{level: infoLevel, ch: ch}, 0)
+	set(debugLogger, &channelWriter{level: debugLevel, ch: ch}, 0)
 
 	return ch, func() {
-		errorLogger.SetOutput(os.Stderr)
-		infoLogger.SetOutput(os.Stderr)
-		debugLogger.SetOutput(os.Stderr)
+		set(errorLogger, os.Stderr, logFlags)
+		set(infoLogger, os.Stderr, logFlags)
+		set(debugLogger, os.Stderr, logFlags)
 	}
 }
 
