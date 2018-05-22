@@ -59,9 +59,9 @@ const (
 var (
 	logFlags = log.LstdFlags | log.LUTC
 
-	errorLogger = log.New(os.Stderr, "[error] ", logFlags)
-	infoLogger  = log.New(os.Stderr, "[info] ", logFlags)
-	debugLogger = log.New(os.Stderr, "[debug] ", logFlags)
+	errorLogger *log.Logger
+	infoLogger  *log.Logger
+	debugLogger *log.Logger
 	nullLogger  = log.New(ioutil.Discard, "", 0)
 
 	logLevelChoice = tbnflag.NewChoice(
@@ -78,6 +78,16 @@ var (
 		debugLevel: debugOrdinal,
 	}
 )
+
+func resetLoggers() {
+	errorLogger = log.New(os.Stderr, "[error] ", logFlags)
+	infoLogger = log.New(os.Stderr, "[info] ", logFlags)
+	debugLogger = log.New(os.Stderr, "[debug] ", logFlags)
+}
+
+func init() {
+	resetLoggers()
+}
 
 func logLevel() int {
 	choice := logLevelChoice.Choice

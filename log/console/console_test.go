@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/turbinelabs/test/assert"
+	"github.com/turbinelabs/test/log"
 )
 
 type testCase struct {
@@ -106,4 +107,17 @@ func TestUninitializedChoice(t *testing.T) {
 	logLevelChoice.Choice = nil
 
 	assert.Equal(t, logLevel(), defaultOrdinal)
+}
+
+func TestToWriteCloser(t *testing.T) {
+	logger, ch := log.NewChannelLogger(10)
+
+	w := ToWriteCloser(logger)
+	defer w.Close()
+
+	w.Write([]byte("partial..."))
+	assert.ChannelEmpty(t, ch)
+
+	w.Write([]byte("...done\n"))
+	assert.Equal(t, <-ch, "partial......done\n")
 }
