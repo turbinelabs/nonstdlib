@@ -461,3 +461,12 @@ func IntEqual(a, b *int) bool {
 
 	return *a == *b
 }
+
+// IntValueOk unpacks an int pointer and returns true if it's non-nil.
+func IntValueOk(i *int) (int, bool) {
+	if i == nil {
+		return 0, false
+	}
+
+	return *i, true
+}

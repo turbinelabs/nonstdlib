@@ -534,3 +534,15 @@ func TestStringEqualWhenNotEqual(t *testing.T) {
 	assert.False(t, StringEqual(String("not"), String("equal")))
 	assert.False(t, StringEqual(String("nope"), nil))
 }
+
+func TestIntValueOkWithNilPtr(t *testing.T) {
+	i, b := IntValueOk(nil)
+	assert.Equal(t, i, 0)
+	assert.False(t, b)
+}
+
+func TestIntValueOkWithNonNilPtr(t *testing.T) {
+	i, b := IntValueOk(Int(10))
+	assert.Equal(t, i, 10)
+	assert.True(t, b)
+}
