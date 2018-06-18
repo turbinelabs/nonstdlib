@@ -17,6 +17,7 @@ limitations under the License.
 package ptr
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -545,4 +546,115 @@ func TestIntValueOkWithNonNilPtr(t *testing.T) {
 	i, b := IntValueOk(Int(10))
 	assert.Equal(t, i, 10)
 	assert.True(t, b)
+}
+
+func TestCompareInts(t *testing.T) {
+	tcs := []struct {
+		left, right *int
+		expected    int
+	}{
+		{
+			left:     nil,
+			right:    nil,
+			expected: 0,
+		},
+		{
+			left:     Int(1),
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     nil,
+			right:    Int(1),
+			expected: -1,
+		},
+		{
+			left:     Int(1),
+			right:    Int(1),
+			expected: 0,
+		},
+		{
+			left:     Int(1),
+			right:    Int(2),
+			expected: -1,
+		},
+		{
+			left:     Int(2),
+			right:    Int(1),
+			expected: 1,
+		},
+	}
+
+	for i, tc := range tcs {
+		assert.Group(
+			fmt.Sprintf("testCases[%d]: left=[%#v], right=[%#v]", i, tc.left, tc.right),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, CompareInts(tc.left, tc.right), tc.expected)
+			},
+		)
+	}
+}
+
+func TestCompareBoolPtrs(t *testing.T) {
+	tcs := []struct {
+		left, right *bool
+		expected    int
+	}{
+		{
+			left:     nil,
+			right:    nil,
+			expected: 0,
+		},
+		{
+			left:     Bool(true),
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     Bool(false),
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     nil,
+			right:    Bool(true),
+			expected: -1,
+		},
+		{
+			left:     nil,
+			right:    Bool(false),
+			expected: -1,
+		},
+		{
+			left:     Bool(false),
+			right:    Bool(true),
+			expected: -1,
+		},
+		{
+			left:     Bool(true),
+			right:    Bool(false),
+			expected: 1,
+		},
+		{
+			left:     Bool(true),
+			right:    Bool(true),
+			expected: 0,
+		},
+		{
+			left:     Bool(false),
+			right:    Bool(false),
+			expected: 0,
+		},
+	}
+
+	for i, tc := range tcs {
+		assert.Group(
+			fmt.Sprintf("testCases[%d]: left=[%#v], right=[%#v]", i, tc.left, tc.right),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, CompareBools(tc.left, tc.right), tc.expected)
+			},
+		)
+	}
 }

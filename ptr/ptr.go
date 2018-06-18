@@ -451,15 +451,45 @@ func StringEqual(a, b *string) bool {
 
 // IntEqual compares two int pointer values
 func IntEqual(a, b *int) bool {
-	if a == nil && b == nil {
-		return true
-	}
+	return CompareInts(a, b) == 0
+}
 
-	if a == nil || b == nil {
-		return false
+// CompareInts treats nil pointers as being less than non-nil pointers. It
+// falls back on int comparison when both arguments are non-nil.
+func CompareInts(a, b *int) int {
+	switch {
+	case a == nil && b == nil:
+		return 0
+	case a == nil && b != nil:
+		return -1
+	case a != nil && b == nil:
+		return 1
+	case *a < *b:
+		return -1
+	case *a > *b:
+		return 1
+	default:
+		return 0
 	}
+}
 
-	return *a == *b
+// CompareBools treats nil pointers as less than non-nil pointers. False is
+// considered less than true.
+func CompareBools(a, b *bool) int {
+	switch {
+	case a == nil && b == nil:
+		return 0
+	case a == nil && b != nil:
+		return -1
+	case a != nil && b == nil:
+		return 1
+	case !*a && *b:
+		return -1
+	case *a && !*b:
+		return 1
+	default:
+		return 0
+	}
 }
 
 // IntValueOk unpacks an int pointer and returns true if it's non-nil.
