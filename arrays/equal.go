@@ -17,77 +17,113 @@ limitations under the License.
 package arrays
 
 func EqualInt(a, b []int) bool {
-	aLen := len(a)
-	if aLen != len(b) {
-		return false
+	return CompareIntSlices(a, b) == 0
+}
+
+// Treats smaller slices as being less than bigger ones and then does a per
+// index comparison betweeen the two slices.
+func CompareIntSlices(a, b []int) int {
+	if len(a) < len(b) {
+		return -1
 	}
 
-	if aLen == 0 {
-		return true
+	if len(a) > len(b) {
+		return 1
 	}
 
-	for i, aVal := range a {
-		if aVal != b[i] {
-			return false
+	for i, av := range a {
+		if av < b[i] {
+			return -1
+		}
+
+		if av > b[i] {
+			return 1
 		}
 	}
 
-	return true
+	return 0
 }
 
 func EqualInt64(a, b []int64) bool {
-	aLen := len(a)
-	if aLen != len(b) {
-		return false
+	return CompareInt64Slices(a, b) == 0
+}
+
+// Treats smaller slices as being less than bigger ones and then does a per
+// index comparison betweeen the two slices.
+func CompareInt64Slices(a, b []int64) int {
+	if len(a) < len(b) {
+		return -1
 	}
 
-	if aLen == 0 {
-		return true
+	if len(a) > len(b) {
+		return 1
 	}
 
-	for i, aVal := range a {
-		if aVal != b[i] {
-			return false
+	for i, av := range a {
+		if av < b[i] {
+			return -1
+		}
+
+		if av > b[i] {
+			return 1
 		}
 	}
 
-	return true
+	return 0
 }
 
 func EqualFloat64(a, b []float64) bool {
-	aLen := len(a)
-	if aLen != len(b) {
-		return false
+	return CompareFloat64Slices(a, b) == 0
+}
+
+// Treats smaller slices as being less than bigger ones and then does a per
+// index comparison betweeen the two slices.
+func CompareFloat64Slices(a, b []float64) int {
+	if len(a) < len(b) {
+		return -1
 	}
 
-	if aLen == 0 {
-		return true
+	if len(a) > len(b) {
+		return 1
 	}
 
-	for i, aVal := range a {
-		if aVal != b[i] {
-			return false
+	for i, av := range a {
+		if av < b[i] {
+			return -1
+		}
+
+		if av > b[i] {
+			return 1
 		}
 	}
 
-	return true
+	return 0
 }
 
 func EqualString(a, b []string) bool {
-	aLen := len(a)
-	if aLen != len(b) {
-		return false
+	return CompareStringSlices(a, b) == 0
+}
+
+// Treats smaller slices as being less than bigger ones and then does a per
+// index comparison betweeen the two slices.
+func CompareStringSlices(a, b []string) int {
+	if len(a) < len(b) {
+		return -1
 	}
 
-	if aLen == 0 {
-		return true
+	if len(a) > len(b) {
+		return 1
 	}
 
-	for i, aVal := range a {
-		if aVal != b[i] {
-			return false
+	for i, av := range a {
+		if av < b[i] {
+			return -1
+		}
+
+		if av > b[i] {
+			return 1
 		}
 	}
 
-	return true
+	return 0
 }

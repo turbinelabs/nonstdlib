@@ -17,6 +17,7 @@ limitations under the License.
 package arrays
 
 import (
+       "fmt"
 	"testing"
 
 	"github.com/turbinelabs/test/assert"
@@ -35,5 +36,66 @@ func TestEqual{{.Public}}(t *testing.T) {
 	assert.True(t, Equal{{.Public}}(x, x))
 	assert.True(t, Equal{{.Public}}(x[0:3], x[2:5]))
 	assert.False(t, Equal{{.Public}}(x[0:3], x[1:4]))
+}
+
+func TestCompare{{.Public}}Slices(t *testing.T) {
+	var z, nz {{.Type}}
+	nz = {{if eq .Type "string"}}"X"{{else}}1{{end}}
+
+	tcs := []struct {
+		left, right []{{.Type}}
+		expected    int
+	}{
+		{
+			left:     nil,
+			right:    nil,
+			expected: 0,
+		},
+		{
+			left:     nil,
+			right:    []{{.Type}}{nz},
+			expected: -1,
+		},
+		{
+			left:     []{{.Type}}{nz},
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     []{{.Type}}{z, z, nz},
+			right:    []{{.Type}}{z, z, z},
+			expected: 1,
+		},
+		{
+			left:     []{{.Type}}{z, z, z},
+			right:    []{{.Type}}{z, z, nz},
+			expected: -1,
+		},
+                {
+			left:     []{{.Type}}{nz, nz},
+			right:    []{{.Type}}{z, z, z},
+			expected: -1,
+		},
+                {
+			left:     []{{.Type}}{z, z, z},
+			right:    []{{.Type}}{nz, nz},
+			expected: 1,
+                },
+                {
+			left:     []{{.Type}}{nz, nz, nz},
+			right:    []{{.Type}}{nz, nz, nz},
+			expected: 0,
+		},
+	}
+
+	for i, tc := range tcs {
+		assert.Group(
+			fmt.Sprintf("testCases[%d]: left=[%#v], right=[%#v]", i, tc.left, tc.right),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, Compare{{.Public}}Slices(tc.left, tc.right), tc.expected)
+			},
+		)
+	}
 }
 {{end -}}

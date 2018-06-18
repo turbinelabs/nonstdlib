@@ -17,6 +17,7 @@ limitations under the License.
 package arrays
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/turbinelabs/test/assert"
@@ -37,6 +38,67 @@ func TestEqualInt(t *testing.T) {
 	assert.False(t, EqualInt(x[0:3], x[1:4]))
 }
 
+func TestCompareIntSlices(t *testing.T) {
+	var z, nz int
+	nz = 1
+
+	tcs := []struct {
+		left, right []int
+		expected    int
+	}{
+		{
+			left:     nil,
+			right:    nil,
+			expected: 0,
+		},
+		{
+			left:     nil,
+			right:    []int{nz},
+			expected: -1,
+		},
+		{
+			left:     []int{nz},
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     []int{z, z, nz},
+			right:    []int{z, z, z},
+			expected: 1,
+		},
+		{
+			left:     []int{z, z, z},
+			right:    []int{z, z, nz},
+			expected: -1,
+		},
+		{
+			left:     []int{nz, nz},
+			right:    []int{z, z, z},
+			expected: -1,
+		},
+		{
+			left:     []int{z, z, z},
+			right:    []int{nz, nz},
+			expected: 1,
+		},
+		{
+			left:     []int{nz, nz, nz},
+			right:    []int{nz, nz, nz},
+			expected: 0,
+		},
+	}
+
+	for i, tc := range tcs {
+		assert.Group(
+			fmt.Sprintf("testCases[%d]: left=[%#v], right=[%#v]", i, tc.left, tc.right),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, CompareIntSlices(tc.left, tc.right), tc.expected)
+			},
+		)
+	}
+}
+
 func TestEqualInt64(t *testing.T) {
 	var z, nz int64
 	nz = 1
@@ -50,6 +112,67 @@ func TestEqualInt64(t *testing.T) {
 	assert.True(t, EqualInt64(x, x))
 	assert.True(t, EqualInt64(x[0:3], x[2:5]))
 	assert.False(t, EqualInt64(x[0:3], x[1:4]))
+}
+
+func TestCompareInt64Slices(t *testing.T) {
+	var z, nz int64
+	nz = 1
+
+	tcs := []struct {
+		left, right []int64
+		expected    int
+	}{
+		{
+			left:     nil,
+			right:    nil,
+			expected: 0,
+		},
+		{
+			left:     nil,
+			right:    []int64{nz},
+			expected: -1,
+		},
+		{
+			left:     []int64{nz},
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     []int64{z, z, nz},
+			right:    []int64{z, z, z},
+			expected: 1,
+		},
+		{
+			left:     []int64{z, z, z},
+			right:    []int64{z, z, nz},
+			expected: -1,
+		},
+		{
+			left:     []int64{nz, nz},
+			right:    []int64{z, z, z},
+			expected: -1,
+		},
+		{
+			left:     []int64{z, z, z},
+			right:    []int64{nz, nz},
+			expected: 1,
+		},
+		{
+			left:     []int64{nz, nz, nz},
+			right:    []int64{nz, nz, nz},
+			expected: 0,
+		},
+	}
+
+	for i, tc := range tcs {
+		assert.Group(
+			fmt.Sprintf("testCases[%d]: left=[%#v], right=[%#v]", i, tc.left, tc.right),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, CompareInt64Slices(tc.left, tc.right), tc.expected)
+			},
+		)
+	}
 }
 
 func TestEqualFloat64(t *testing.T) {
@@ -67,6 +190,67 @@ func TestEqualFloat64(t *testing.T) {
 	assert.False(t, EqualFloat64(x[0:3], x[1:4]))
 }
 
+func TestCompareFloat64Slices(t *testing.T) {
+	var z, nz float64
+	nz = 1
+
+	tcs := []struct {
+		left, right []float64
+		expected    int
+	}{
+		{
+			left:     nil,
+			right:    nil,
+			expected: 0,
+		},
+		{
+			left:     nil,
+			right:    []float64{nz},
+			expected: -1,
+		},
+		{
+			left:     []float64{nz},
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     []float64{z, z, nz},
+			right:    []float64{z, z, z},
+			expected: 1,
+		},
+		{
+			left:     []float64{z, z, z},
+			right:    []float64{z, z, nz},
+			expected: -1,
+		},
+		{
+			left:     []float64{nz, nz},
+			right:    []float64{z, z, z},
+			expected: -1,
+		},
+		{
+			left:     []float64{z, z, z},
+			right:    []float64{nz, nz},
+			expected: 1,
+		},
+		{
+			left:     []float64{nz, nz, nz},
+			right:    []float64{nz, nz, nz},
+			expected: 0,
+		},
+	}
+
+	for i, tc := range tcs {
+		assert.Group(
+			fmt.Sprintf("testCases[%d]: left=[%#v], right=[%#v]", i, tc.left, tc.right),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, CompareFloat64Slices(tc.left, tc.right), tc.expected)
+			},
+		)
+	}
+}
+
 func TestEqualString(t *testing.T) {
 	var z, nz string
 	nz = "X"
@@ -80,4 +264,65 @@ func TestEqualString(t *testing.T) {
 	assert.True(t, EqualString(x, x))
 	assert.True(t, EqualString(x[0:3], x[2:5]))
 	assert.False(t, EqualString(x[0:3], x[1:4]))
+}
+
+func TestCompareStringSlices(t *testing.T) {
+	var z, nz string
+	nz = "X"
+
+	tcs := []struct {
+		left, right []string
+		expected    int
+	}{
+		{
+			left:     nil,
+			right:    nil,
+			expected: 0,
+		},
+		{
+			left:     nil,
+			right:    []string{nz},
+			expected: -1,
+		},
+		{
+			left:     []string{nz},
+			right:    nil,
+			expected: 1,
+		},
+		{
+			left:     []string{z, z, nz},
+			right:    []string{z, z, z},
+			expected: 1,
+		},
+		{
+			left:     []string{z, z, z},
+			right:    []string{z, z, nz},
+			expected: -1,
+		},
+		{
+			left:     []string{nz, nz},
+			right:    []string{z, z, z},
+			expected: -1,
+		},
+		{
+			left:     []string{z, z, z},
+			right:    []string{nz, nz},
+			expected: 1,
+		},
+		{
+			left:     []string{nz, nz, nz},
+			right:    []string{nz, nz, nz},
+			expected: 0,
+		},
+	}
+
+	for i, tc := range tcs {
+		assert.Group(
+			fmt.Sprintf("testCases[%d]: left=[%#v], right=[%#v]", i, tc.left, tc.right),
+			t,
+			func(g *assert.G) {
+				assert.Equal(g, CompareStringSlices(tc.left, tc.right), tc.expected)
+			},
+		)
+	}
 }

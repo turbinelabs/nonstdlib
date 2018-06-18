@@ -17,21 +17,30 @@ limitations under the License.
 package arrays
 {{range .types}}
 func Equal{{.Public}}(a, b []{{.Type}}) bool {
-	aLen := len(a)
-	if aLen != len(b) {
-		return false
+     return Compare{{.Public}}Slices(a, b) == 0
+}
+
+// Treats smaller slices as being less than bigger ones and then does a per
+// index comparison betweeen the two slices.
+func Compare{{.Public}}Slices(a, b []{{.Type}}) int{
+	if len(a) < len(b) {
+		return -1
 	}
 
-	if aLen == 0 {
-		return true
+	if len(a) > len(b) {
+		return 1
 	}
 
-	for i, aVal := range a {
-		if aVal != b[i] {
-			return false
+	for i, av := range a {
+		if av < b[i] {
+			return -1
+		}
+
+		if av > b[i] {
+			return 1
 		}
 	}
 
-	return true
+	return 0
 }
 {{end -}}
