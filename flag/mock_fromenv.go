@@ -45,8 +45,10 @@ func (mr *MockFromEnvMockRecorder) Prefix() *gomock.Call {
 }
 
 // Fill mocks base method
-func (m *MockFromEnv) Fill() {
-	m.ctrl.Call(m, "Fill")
+func (m *MockFromEnv) Fill() error {
+	ret := m.ctrl.Call(m, "Fill")
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Fill indicates an expected call of Fill

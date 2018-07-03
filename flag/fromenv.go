@@ -65,7 +65,7 @@ type FromEnv interface {
 	//
 	// the provided map[string]string is also populated with the keys and values
 	// added to the FlagSet.
-	Fill()
+	Fill() error
 
 	// Filled returns a map of the environment keys and values for flags currently
 	// filled from the environment. Values for flags marked sensitive will be
@@ -87,7 +87,8 @@ func (fe fromEnv) Prefix() string {
 	return EnvKey(fe.prefix, "")
 }
 
-func (fe fromEnv) Fill() {
+func (fe fromEnv) Fill() error {
+	var firstErr error
 	alreadySet := map[string]bool{}
 	fe.fs.Visit(func(f *flag.Flag) {
 		alreadySet[f.Name] = true
@@ -97,15 +98,21 @@ func (fe fromEnv) Fill() {
 			key := EnvKey(fe.prefix, f.Name)
 			val, found := fe.os.LookupEnv(key)
 			if found {
-				fe.fs.Set(f.Name, val)
 				if usage.IsSensitive(f) {
 					fe.filledFromEnv[key] = "<redacted>"
 				} else {
 					fe.filledFromEnv[key] = val
 				}
+				if err := fe.fs.Set(f.Name, val); err != nil {
+					if firstErr == nil {
+						firstErr = err
+					}
+					return
+				}
 			}
 		}
 	})
+	return firstErr
 }
 
 func (fe fromEnv) Filled() map[string]string {

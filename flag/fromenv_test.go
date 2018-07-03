@@ -81,7 +81,7 @@ func TestFillFromEnvAllUnset(t *testing.T) {
 	fe := NewFromEnv(fs, "foo", "bar").(fromEnv)
 	fe.os = mockOS
 
-	fe.Fill()
+	assert.Nil(t, fe.Fill())
 
 	assert.Equal(t, *fooFlag, "")
 	assert.Equal(t, *barFlag, "bar-default")
@@ -105,11 +105,32 @@ func TestFillFromEnvOneSet(t *testing.T) {
 	fe := NewFromEnv(fs, "foo", "bar").(fromEnv)
 	fe.os = mockOS
 
-	fe.Fill()
+	assert.Nil(t, fe.Fill())
 
 	assert.Equal(t, *fooFlag, "blargo")
 	assert.Equal(t, *barFlag, "")
 	assert.DeepEqual(t, fe.Filled(), map[string]string{})
+}
+
+func TestFillFromEnvIllegalValue(t *testing.T) {
+	ctrl := gomock.NewController(assert.Tracing(t))
+	defer ctrl.Finish()
+
+	mockOS := tbnos.NewMockOS(ctrl)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_FOO_BAZ").Return("", false)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_BAR").Return("", false)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_QUX").Return("", false)
+	mockOS.EXPECT().LookupEnv("FOO_BAR_INT").Return("not an int", true)
+
+	fs, _, _, _ := testFlags()
+	fs.Int("int", 0, "some int")
+	fs.Parse([]string{""})
+
+	fe := NewFromEnv(fs, "foo", "bar").(fromEnv)
+	fe.os = mockOS
+
+	assert.ErrorContains(t, fe.Fill(), `strconv.ParseInt: parsing "not an int"`)
+	assert.DeepEqual(t, fe.Filled(), map[string]string{"FOO_BAR_INT": "not an int"})
 }
 
 func TestFillFromEnvOneSensitive(t *testing.T) {
@@ -126,7 +147,7 @@ func TestFillFromEnvOneSensitive(t *testing.T) {
 	fe := NewFromEnv(fs, "foo", "bar").(fromEnv)
 	fe.os = mockOS
 
-	fe.Fill()
+	assert.Nil(t, fe.Fill())
 
 	assert.DeepEqual(t, fe.Filled(), map[string]string{"FOO_BAR_QUX": "<redacted>"})
 }
