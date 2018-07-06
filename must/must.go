@@ -23,10 +23,26 @@ import (
 	"database/sql"
 
 	"github.com/turbinelabs/nonstdlib/log/console"
+	"github.com/turbinelabs/test/stack"
 )
+
+var includeStackTrace = false
+
+// ShouldIncludeStackTrace controles whether or not calling die will also
+// produce a stack trace when failing. It sets a global variable so best
+// practice is to set it once at the entry point of the application using
+// must.
+func ShouldIncludeStackTrace(include bool) {
+	includeStackTrace = include
+}
 
 func die(e error) {
 	if e != nil {
+		if includeStackTrace {
+			s := stack.New()
+			s.Pop(2)
+			console.Error().Printf(s.Format(true))
+		}
 		console.Error().Fatal(e)
 	}
 }
