@@ -21,7 +21,6 @@ limitations under the License.
 package editor
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -39,7 +38,11 @@ var (
 	DefaultEditor = ""
 
 	// ErrNoEditor indicates that no EDITOR was set in the environment.
-	ErrNoEditor = errors.New("could not find " + EditorVar + "environment variable")
+	ErrNoEditor = fmt.Errorf(
+		"the $%s environment variable is empty or unset. Please set $%s to a path within $PATH to the command-line editor of your choice (e.g. /usr/bin/vi or /usr/bin/emacs)",
+		EditorVar,
+		EditorVar,
+	)
 )
 
 // Get returns the editor that will be used as determined by reading the
@@ -47,10 +50,6 @@ var (
 // returned as the first return value. The second return value will be a
 // space split slice of the contents.
 func Get() (string, []string, error) {
-	return getEditor()
-}
-
-func getEditor() (string, []string, error) {
 	edit := os.Getenv(EditorVar)
 	if edit == "" && DefaultEditor != "" {
 		edit = DefaultEditor
@@ -66,7 +65,7 @@ func getEditor() (string, []string, error) {
 // EditPath opens a specified path in the configured editor. If the path
 // doesn't exist or fails to open then an error is returned.
 func EditPath(path string) error {
-	_, tokenized, err := getEditor()
+	_, tokenized, err := Get()
 	if err != nil {
 		return err
 	}
@@ -118,7 +117,11 @@ func EditTextType(str, ext string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	err = EditPath(path)
+	if err != nil {
+		return "", err
+	}
 
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
